@@ -22,6 +22,7 @@ static NSString *accessGroupID() {
             status = SecItemAdd((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
         if (status == errSecSuccess)
             cachedID = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
+        if (result) CFRelease(result);
     });
     return cachedID;
 }
