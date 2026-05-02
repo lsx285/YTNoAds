@@ -29,7 +29,8 @@ static const NSInteger YTNoAdsSection = 'ynoa';
 
 %hook YTAppSettingsPresentationData
 + (NSArray<NSNumber *> *)settingsCategoryOrder {
-    NSMutableArray<NSNumber *> *order = [[%orig] mutableCopy];
+    NSArray<NSNumber *> *origOrder = %orig;
+    NSMutableArray<NSNumber *> *order = [origOrder mutableCopy];
     NSUInteger idx = [order indexOfObject:@(1)];
     if (idx != NSNotFound)
         [order insertObject:@(YTNoAdsSection) atIndex:idx + 1];

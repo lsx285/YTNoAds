@@ -71,21 +71,6 @@
 #define SB_ACTION_KEY(cat) [NSString stringWithFormat:@"YouModSBAction_%@", cat]
 #define SB_COLOR_KEY(cat)  [NSString stringWithFormat:@"YouModSBColor_%@", cat]
 
-// ─── Pivot bar (for Extras.x) ────────────────────────────────────────────────
-
-@interface YTIPivotBarItemRenderer : NSObject
-- (NSString *)pivotIdentifier;
-@end
-
-@interface YTIPivotBarIconOnlyItemRenderer : NSObject
-- (NSString *)pivotIdentifier;
-@end
-
-@interface YTIPivotBarSupportedRenderers : NSObject
-- (YTIPivotBarItemRenderer *)pivotBarItemRenderer;
-- (YTIPivotBarIconOnlyItemRenderer *)pivotBarIconOnlyItemRenderer;
-@end
-
 // ─── Misc YouTube interfaces ──────────────────────────────────────────────────
 
 @interface YTITopbarLogoRenderer : NSObject
