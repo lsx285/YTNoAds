@@ -1,0 +1,47 @@
+name: Setup Theos
+description: Installs dependencies, caches and sets up Theos with the iOS 18.6 SDK and YouTubeHeader
+
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: brew install make ldid
+
+    - name: Set PATH environment variables
+      shell: bash
+      run: |
+        echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
+        echo "THEOS=${{ github.workspace }}/theos" >> $GITHUB_ENV
+
+    - name: Get Theos commit
+      shell: bash
+      run: |
+        echo "THEOS_COMMIT=$(git ls-remote "https://github.com/roothide/theos" HEAD | awk '{print substr($1,1,7)}')" >> $GITHUB_ENV
+
+    - name: Cache Theos
+      id: cache-theos
+      uses: actions/cache@v4
+      with:
+        path: theos
+        key: YTNoAds-18.6-SDK-${{ env.THEOS_COMMIT }}
+
+    - name: Setup Theos
+      if: steps.cache-theos.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        git clone --quiet --depth=1 --recurse-submodules https://github.com/roothide/theos.git
+        git clone --quiet --depth=1 -n --filter=tree:0 https://github.com/Tonwalter888/iOS-SDKs.git
+        cd iOS-SDKs
+        git sparse-checkout set --no-cone iPhoneOS18.6.sdk
+        git checkout --quiet
+        mv *.sdk "$THEOS/sdks"
+
+    - name: Clone headers
+      shell: bash
+      run: |
+        if [ ! -d "$THEOS/include/YouTubeHeader" ]; then
+          git clone --quiet --depth=1 https://github.com/PoomSmart/YouTubeHeader.git "$THEOS/include/YouTubeHeader"
+        else
+          git -C "$THEOS/include/YouTubeHeader" pull --quiet --force
+        fi
