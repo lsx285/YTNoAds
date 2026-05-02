@@ -28,7 +28,7 @@ jobs:
           path: YTNoAds
 
       - name: Install dependencies
-        run: brew install make ldid
+        run: HOMEBREW_NO_AUTO_UPDATE=1 brew install make ldid
 
       - name: Set PATH environment variables
         run: |
@@ -58,7 +58,7 @@ jobs:
 
       - name: Clone headers
         run: |
-          if [ ! -d "$THEOS/include/YouTubeHeader" ]; then
+          if[ ! -d "$THEOS/include/YouTubeHeader" ]; then
             git clone --quiet --depth=1 https://github.com/PoomSmart/YouTubeHeader.git "$THEOS/include/YouTubeHeader"
           else
             cd $THEOS/include/YouTubeHeader && git pull --quiet --force && cd ${{ github.workspace }}
@@ -67,7 +67,7 @@ jobs:
       - name: Build YTNoAds
         run: |
           cd YTNoAds
-          echo "YTNOADS_VERSION=$(grep '^Version:' control | cut -d ' ' -f2)" >> $GITHUB_ENV
+          echo "YTNOADS_VERSION=$(awk '/^Version:/ {print $2}' control)" >> $GITHUB_ENV
           make clean package DEBUG=0 FINALPACKAGE=1
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
@@ -86,8 +86,5 @@ jobs:
         with:
           tag_name: v${{ env.YTNOADS_VERSION }}
           name: v${{ env.YTNOADS_VERSION }}
-          files: |
-            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm.deb
-            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm64.deb
-            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm64e.deb
+          files: "*.deb" # Replaced hardcoded names with wildcard to ensure it won't break if you rename anything
           draft: true
