@@ -486,62 +486,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 
 @end
 
-// ─── Hook: register top-level SponsorBlock section ───────────────────────────
 
-static const NSInteger kSBSectionCategory = 'ytsb';
-
-@interface YTSettingsSectionItemManager (SponsorBlock)
-- (void)updateSponsorBlockSectionWithEntry:(id)entry;
-@end
-
-%hook YTSettingsSectionItemManager
-
-%new(v@:@)
-- (void)updateSponsorBlockSectionWithEntry:(id)entry {
-    YTSettingsViewController *settingsVC =
-        [self valueForKey:@"_settingsViewControllerDelegate"];
-    Class Item = %c(YTSettingsSectionItem);
-
-    // One row whose selectBlock pushes the full SBSettingsViewController
-    YTSettingsSectionItem *sbItem = [Item
-        itemWithTitle:@"SponsorBlock"
-        accessibilityIdentifier:nil
-        detailTextBlock:nil
-        selectBlock:^BOOL(YTSettingsCell *cell, NSUInteger arg1) {
-            Class sbClass = objc_getClass("SBSettingsViewControllerStyled");
-            if (!sbClass) sbClass = [SBSettingsViewController class];
-            id allocated = [sbClass alloc];
-            SBSettingsViewController *sbVC =
-                (SBSettingsViewController *)((id (*)(id, SEL, id))objc_msgSend)
-                    (allocated, @selector(initWithParentResponder:), settingsVC);
-            [settingsVC pushViewController:sbVC];
-            return YES;
-        }];
-
-    YTIIcon *icon = [%c(YTIIcon) new];
-    icon.iconType = 530;
-    sbItem.settingIcon = icon;
-
-    NSMutableArray<YTSettingsSectionItem *> *items =
-        [NSMutableArray arrayWithObject:sbItem];
-
-    if ([settingsVC respondsToSelector:
-            @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)])
-        [settingsVC setSectionItems:items
-                        forCategory:kSBSectionCategory
-                              title:@"SponsorBlock"
-                               icon:icon
-                   titleDescription:nil
-                       headerHidden:NO];
-    else
-        [settingsVC setSectionItems:items
-                        forCategory:kSBSectionCategory
-                              title:@"SponsorBlock"
-                   titleDescription:nil
-                       headerHidden:NO];
-}
-
-%end
 
 // ─── Runtime subclass + defaults ─────────────────────────────────────────────
 

@@ -1,13 +1,13 @@
 // Settings.x — YTNoAds
-// Adds a "SponsorBlock" section directly to YouTube's native settings screen.
+// Adds a "SponsorBlock" entry directly to YouTube's native settings screen.
 #import "Headers.h"
+#import <objc/runtime.h>
+#import <objc/message.h>
 
-// FourCC tag for our section — unlikely to collide with YouTube's own categories.
 static const NSInteger SBSection = 'ytsb';
 
-// Forward-declare the method added by SponsorBlockSettings.x so we can call it.
-@interface YTSettingsSectionItemManager (YTNoAds)
-- (void)updateSponsorBlockSectionWithEntry:(id)entry;
+// Forward-declare SBSettingsViewController from SponsorBlockSettings.x
+@interface SBSettingsViewController : UIViewController
 @end
 
 // ─── Insert our section into the category list ────────────────────────────────
@@ -32,14 +32,56 @@ static const NSInteger SBSection = 'ytsb';
 }
 %end
 
-// ─── Route YouTube's section population call to SponsorBlock ─────────────────
+// ─── Populate our section with one row that pushes SBSettingsViewController ──
 
 %hook YTSettingsSectionItemManager
 
 - (void)updateSectionForCategory:(NSUInteger)category withEntry:(id)entry {
     %orig;
-    if (category == (NSUInteger)SBSection)
-        [self updateSponsorBlockSectionWithEntry:entry];
+    if (category != (NSUInteger)SBSection) return;
+
+    YTSettingsViewController *settingsVC =
+        [self valueForKey:@"_settingsViewControllerDelegate"];
+    Class Item = %c(YTSettingsSectionItem);
+
+    YTSettingsSectionItem *sbRow = [Item
+        itemWithTitle:@"SponsorBlock"
+        accessibilityIdentifier:nil
+        detailTextBlock:nil
+        selectBlock:^BOOL(YTSettingsCell *cell, NSUInteger arg1) {
+            Class sbClass = objc_getClass("SBSettingsViewControllerStyled");
+            if (!sbClass) sbClass = [SBSettingsViewController class];
+            id allocated = [sbClass alloc];
+            SBSettingsViewController *sbVC =
+                (SBSettingsViewController *)((id (*)(id, SEL, id))objc_msgSend)
+                    (allocated, @selector(initWithParentResponder:), settingsVC);
+            [settingsVC pushViewController:sbVC];
+            return YES;
+        }];
+
+    YTIIcon *icon = [%c(YTIIcon) new];
+    icon.iconType = 530;
+    sbRow.settingIcon = icon;
+
+    NSMutableArray<YTSettingsSectionItem *> *items =
+        [NSMutableArray arrayWithObject:sbRow];
+
+    // headerHidden:YES suppresses the section title so only the row is visible,
+    // giving the appearance of a single flat entry in the settings list.
+    if ([settingsVC respondsToSelector:
+            @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)])
+        [settingsVC setSectionItems:items
+                        forCategory:SBSection
+                              title:@"SponsorBlock"
+                               icon:icon
+                   titleDescription:nil
+                       headerHidden:YES];
+    else
+        [settingsVC setSectionItems:items
+                        forCategory:SBSection
+                              title:@"SponsorBlock"
+                   titleDescription:nil
+                       headerHidden:YES];
 }
 
 %end
