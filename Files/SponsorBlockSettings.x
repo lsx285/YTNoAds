@@ -500,44 +500,14 @@ static const NSInteger kSBSectionCategory = 'ytsb';
 - (void)updateSponsorBlockSectionWithEntry:(id)entry {
     YTSettingsViewController *settingsVC =
         [self valueForKey:@"_settingsViewControllerDelegate"];
-    Class YTSettingsSectionItemClass = %c(YTSettingsSectionItem);
 
-    YTSettingsSectionItem *openItem = [YTSettingsSectionItemClass
-        itemWithTitle:@"SponsorBlock Settings"
-        accessibilityIdentifier:nil
-        detailTextBlock:nil
-        selectBlock:^BOOL(YTSettingsCell *cell, NSUInteger arg1) {
-            Class sbClass = objc_getClass("SBSettingsViewControllerStyled");
-            if (!sbClass) sbClass = [SBSettingsViewController class];
-            id allocated = [sbClass alloc];
-            SBSettingsViewController *sbVC =
-                (SBSettingsViewController *)((id (*)(id, SEL, id))objc_msgSend)
-                    (allocated, @selector(initWithParentResponder:), settingsVC);
-            [settingsVC pushViewController:sbVC];
-            return YES;
-        }];
-
-    YTIIcon *icon = [%c(YTIIcon) new];
-    icon.iconType = 530;
-    openItem.settingIcon = icon;
-
-    NSMutableArray<YTSettingsSectionItem *> *sectionItems =
-        [NSMutableArray arrayWithObject:openItem];
-
-    if ([settingsVC respondsToSelector:
-            @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)])
-        [settingsVC setSectionItems:sectionItems
-                        forCategory:kSBSectionCategory
-                              title:@"SponsorBlock"
-                               icon:icon
-                   titleDescription:nil
-                       headerHidden:NO];
-    else
-        [settingsVC setSectionItems:sectionItems
-                        forCategory:kSBSectionCategory
-                              title:@"SponsorBlock"
-                   titleDescription:nil
-                       headerHidden:NO];
+    Class sbClass = objc_getClass("SBSettingsViewControllerStyled");
+    if (!sbClass) sbClass = [SBSettingsViewController class];
+    id allocated = [sbClass alloc];
+    SBSettingsViewController *sbVC =
+        (SBSettingsViewController *)((id (*)(id, SEL, id))objc_msgSend)
+            (allocated, @selector(initWithParentResponder:), settingsVC);
+    [settingsVC pushViewController:sbVC];
 }
 
 %end
