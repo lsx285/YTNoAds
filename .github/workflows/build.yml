@@ -87,7 +87,7 @@ jobs:
           tag_name: v${{ env.YTNOADS_VERSION }}
           name: v${{ env.YTNOADS_VERSION }}
           files: |
-            dev.water888.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm.deb
-            dev.water888.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm64.deb
-            dev.water888.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm64e.deb
+            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm.deb
+            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm64.deb
+            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm64e.deb
           draft: true
