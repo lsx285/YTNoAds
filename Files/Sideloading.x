@@ -4,23 +4,26 @@
 #define YT_BUNDLE_ID @"com.google.ios.youtube"
 #define YT_NAME @"YouTube"
 
-// Resolves the actual keychain access group for the sideloaded app.
-// Without this, YouTube can't find its saved login tokens on relaunch.
+// Cached keychain access group lookup — resolves once and reuses the result.
+// Without this, YouTube can't find its saved login tokens on relaunch after sideloading.
 static NSString *accessGroupID() {
-    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
-                           (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
-                           @"bundleSeedID", kSecAttrAccount,
-                           @"", kSecAttrService,
-                           (id)kCFBooleanTrue, kSecReturnAttributes,
-                           nil];
-    CFDictionaryRef result = nil;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-    if (status == errSecItemNotFound) {
-        status = SecItemAdd((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
-        if (status != errSecSuccess) return nil;
-    }
-    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-    return accessGroup;
+    static NSString *cachedID = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSDictionary *query = @{
+            (__bridge NSString *)kSecClass:            (__bridge NSString *)kSecClassGenericPassword,
+            (__bridge NSString *)kSecAttrAccount:      @"bundleSeedID",
+            (__bridge NSString *)kSecAttrService:      @"",
+            (__bridge NSString *)kSecReturnAttributes: @YES
+        };
+        CFDictionaryRef result = nil;
+        OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
+        if (status == errSecItemNotFound)
+            status = SecItemAdd((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
+        if (status == errSecSuccess)
+            cachedID = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
+    });
+    return cachedID;
 }
 
 // IAmYouTube - makes the app identify itself as the real YouTube
@@ -86,12 +89,12 @@ static NSString *accessGroupID() {
     return [self isEqual:NSBundle.mainBundle] ? YT_BUNDLE_ID : %orig;
 }
 - (NSDictionary *)infoDictionary {
-    NSDictionary *dict = %orig;
+    // Early-exit before calling %orig a second time for non-main bundles.
     if (![self isEqual:NSBundle.mainBundle]) return %orig;
-    NSMutableDictionary *info = [dict mutableCopy];
-    if (info[@"CFBundleIdentifier"])   info[@"CFBundleIdentifier"]   = YT_BUNDLE_ID;
-    if (info[@"CFBundleDisplayName"])  info[@"CFBundleDisplayName"]  = YT_NAME;
-    if (info[@"CFBundleName"])         info[@"CFBundleName"]         = YT_NAME;
+    NSMutableDictionary *info = [%orig mutableCopy];
+    if (info[@"CFBundleIdentifier"])  info[@"CFBundleIdentifier"]  = YT_BUNDLE_ID;
+    if (info[@"CFBundleDisplayName"]) info[@"CFBundleDisplayName"] = YT_NAME;
+    if (info[@"CFBundleName"])        info[@"CFBundleName"]        = YT_NAME;
     return info;
 }
 - (id)objectForInfoDictionaryKey:(NSString *)key {
@@ -152,15 +155,12 @@ static NSString *accessGroupID() {
 - (id)keychainAccessGroup { return accessGroupID(); }
 %end
 
-// Fixes a crash when YouTube tries to use app group containers
-// (which don't exist in sideloaded apps). Redirects to Documents/AppGroup.
+// Redirects app group container lookups to Documents/AppGroup since
+// sideloaded apps don't have real entitlement-backed app groups.
 %hook NSFileManager
 - (NSURL *)containerURLForSecurityApplicationGroupIdentifier:(NSString *)groupIdentifier {
-    if (groupIdentifier != nil) {
-        NSArray *paths = [[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
-        NSURL *documentsURL = [paths lastObject];
-        return [documentsURL URLByAppendingPathComponent:@"AppGroup"];
-    }
-    return %orig(groupIdentifier);
+    if (!groupIdentifier) return %orig(groupIdentifier);
+    NSURL *documentsURL = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
+    return [documentsURL URLByAppendingPathComponent:@"AppGroup"];
 }
 %end

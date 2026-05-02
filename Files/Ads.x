@@ -9,7 +9,7 @@ static BOOL isProductList(YTICommand *command) {
     return NO;
 }
 
-NSString *getAdString(NSString *description) {
+static NSString *getAdString(NSString *description) {
     for (NSString *str in @[
         @"brand_promo",
         @"carousel_footered_layout",
@@ -36,44 +36,33 @@ NSString *getAdString(NSString *description) {
     return nil;
 }
 
-static BOOL isAdRenderer(YTIElementRenderer *elementRenderer, int kind) {
-    if ([elementRenderer respondsToSelector:@selector(hasCompatibilityOptions)] && elementRenderer.hasCompatibilityOptions && elementRenderer.compatibilityOptions.hasAdLoggingData) {
+// Removed unused `kind` parameter — was passed as 2/3/4 but never read.
+static BOOL isAdRenderer(YTIElementRenderer *elementRenderer) {
+    if ([elementRenderer respondsToSelector:@selector(hasCompatibilityOptions)] &&
+        elementRenderer.hasCompatibilityOptions &&
+        elementRenderer.compatibilityOptions.hasAdLoggingData)
         return YES;
-    }
-    NSString *description = [elementRenderer description];
-    NSString *adString = getAdString(description);
-    if (adString) {
-        return YES;
-    }
-    return NO;
+    return getAdString([elementRenderer description]) != nil;
 }
 
 static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItemSectionRenderer *> *array) {
     NSMutableArray <YTIItemSectionRenderer *> *newArray = [array mutableCopy];
     NSIndexSet *removeIndexes = [newArray indexesOfObjectsPassingTest:^BOOL(YTIItemSectionRenderer *sectionRenderer, NSUInteger idx, BOOL *stop) {
         if ([sectionRenderer isKindOfClass:%c(YTIShelfRenderer)]) {
-            YTIShelfSupportedRenderers *content = ((YTIShelfRenderer *)sectionRenderer).content;
-            YTIHorizontalListRenderer *horizontalListRenderer = content.horizontalListRenderer;
-            NSMutableArray <YTIHorizontalListSupportedRenderers *> *itemsArray = horizontalListRenderer.itemsArray;
-            NSIndexSet *removeItemsArrayIndexes = [itemsArray indexesOfObjectsPassingTest:^BOOL(YTIHorizontalListSupportedRenderers *horizontalListSupportedRenderers, NSUInteger idx2, BOOL *stop2) {
-                YTIElementRenderer *elementRenderer = horizontalListSupportedRenderers.elementRenderer;
-                return isAdRenderer(elementRenderer, 4);
-            }];
-            [itemsArray removeObjectsAtIndexes:removeItemsArrayIndexes];
+            NSMutableArray <YTIHorizontalListSupportedRenderers *> *itemsArray = ((YTIShelfRenderer *)sectionRenderer).content.horizontalListRenderer.itemsArray;
+            [itemsArray removeObjectsAtIndexes:[itemsArray indexesOfObjectsPassingTest:^BOOL(YTIHorizontalListSupportedRenderers *item, NSUInteger idx2, BOOL *stop2) {
+                return isAdRenderer(item.elementRenderer);
+            }]];
         }
         if (![sectionRenderer isKindOfClass:%c(YTIItemSectionRenderer)])
             return NO;
         NSMutableArray <YTIItemSectionSupportedRenderers *> *contentsArray = sectionRenderer.contentsArray;
         if (contentsArray.count > 1) {
-            NSIndexSet *removeContentsArrayIndexes = [contentsArray indexesOfObjectsPassingTest:^BOOL(YTIItemSectionSupportedRenderers *sectionSupportedRenderers, NSUInteger idx2, BOOL *stop2) {
-                YTIElementRenderer *elementRenderer = sectionSupportedRenderers.elementRenderer;
-                return isAdRenderer(elementRenderer, 3);
-            }];
-            [contentsArray removeObjectsAtIndexes:removeContentsArrayIndexes];
+            [contentsArray removeObjectsAtIndexes:[contentsArray indexesOfObjectsPassingTest:^BOOL(YTIItemSectionSupportedRenderers *item, NSUInteger idx2, BOOL *stop2) {
+                return isAdRenderer(item.elementRenderer);
+            }]];
         }
-        YTIItemSectionSupportedRenderers *firstObject = [contentsArray firstObject];
-        YTIElementRenderer *elementRenderer = firstObject.elementRenderer;
-        return isAdRenderer(elementRenderer, 2);
+        return isAdRenderer([contentsArray firstObject].elementRenderer);
     }];
     [newArray removeObjectsAtIndexes:removeIndexes];
     return newArray;
@@ -153,8 +142,7 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
 - (void)loadWithModel:(YTIWatchNextResponse *)model {
     YTICommand *onUiReady = model.onUiReady;
     if ([onUiReady respondsToSelector:@selector(yt_commandExecutorCommand)]) {
-        YTICommandExecutorCommand *commandExecutorCommand = [onUiReady yt_commandExecutorCommand];
-        NSMutableArray <YTICommand *> *commandsArray = commandExecutorCommand.commandsArray;
+        NSMutableArray <YTICommand *> *commandsArray = [onUiReady yt_commandExecutorCommand].commandsArray;
         [commandsArray removeObjectsAtIndexes:[commandsArray indexesOfObjectsPassingTest:^BOOL(YTICommand *command, NSUInteger idx, BOOL *stop) {
             return isProductList(command);
         }]];
@@ -203,12 +191,10 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
 %end
 
 // NoYTPremium - @PoomSmart https://github.com/PoomSmart/NoYTPremium
-// Alert
 %hook YTCommerceEventGroupHandler
 - (void)addEventHandlers {}
 %end
 
-// Full-screen
 %hook YTInterstitialPromoEventGroupHandler
 - (void)addEventHandlers {}
 %end
@@ -237,17 +223,14 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
 }
 %end
 
-// "Try new features" in settings
 %hook YTSettingsSectionItemManager
 - (void)updatePremiumEarlyAccessSectionWithEntry:(id)arg1 {}
 %end
 
-// Survey
 %hook YTSurveyController
 - (void)showSurveyWithRenderer:(id)arg1 surveyParentResponder:(id)arg2 {}
 %end
 
-// Hide AI things
 %hook YTShortsSharedGalleryPresentationView
 - (BOOL)shouldShowAiMontageButton { return NO; }
 %end
@@ -356,15 +339,7 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
 
 %hook YTIElementRenderer
 - (NSData *)elementData {
-    NSString *description = [self description];
-    NSString *adString = getAdString(description);
-    if (adString) return [NSData data];
-    // NSArray *shortsToRemove = @[@"shorts_shelf.eml", @"shorts_video_cell.eml", @"6Shorts", @"eml.shorts-shelf"];
-    // for (NSString *shorts in shortsToRemove) {
-    //     if (IS_ENABLED(HideShortsShelf) && [description containsString:shorts] && ![description containsString:@"history*"]) {
-    //         return nil;
-    //     }
-    // }
+    if (getAdString([self description])) return [NSData data];
     return %orig;
 }
 %end

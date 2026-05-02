@@ -21,12 +21,9 @@
 %hook YTPivotBarView
 - (void)setRenderer:(YTIPivotBarRenderer *)renderer {
     NSMutableArray *items = [renderer itemsArray];
-    NSMutableIndexSet *indicesToRemove = [NSMutableIndexSet indexSet];
-    for (NSUInteger i = 0; i < items.count; i++) {
-        NSString *pID2 = [[items[i] pivotBarIconOnlyItemRenderer] pivotIdentifier];
-        if ([pID2 isEqualToString:@"FEuploads"]) [indicesToRemove addIndex:i];
-    }
-    [items removeObjectsAtIndexes:indicesToRemove];
+    [items removeObjectsAtIndexes:[items indexesOfObjectsPassingTest:^BOOL(YTIPivotBarSupportedRenderers *item, NSUInteger idx, BOOL *stop) {
+        return [[item pivotBarIconOnlyItemRenderer].pivotIdentifier isEqualToString:@"FEuploads"];
+    }]];
     %orig(renderer);
 }
 %end
