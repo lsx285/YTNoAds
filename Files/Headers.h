@@ -36,7 +36,6 @@
 
 // For Settings.x and SponsorBlockSettings.x
 #import <YouTubeHeader/YTDefaultSheetController.h>
-#import <PSHeader/Misc.h>
 
 @interface YTDefaultSheetController (YTNoAds)
 + (instancetype)sheetControllerWithParentResponder:(id)responder;

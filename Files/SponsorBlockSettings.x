@@ -9,11 +9,24 @@ static NSBundle *SBSettingsBundle() {
     static NSBundle *bundle = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSString *tweakBundlePath = [[NSBundle mainBundle] pathForResource:@"YTNoAds" ofType:@"bundle"];
-        if (tweakBundlePath)
-            bundle = [NSBundle bundleWithPath:tweakBundlePath];
-        else
-            bundle = [NSBundle bundleWithPath:[NSString stringWithFormat:PS_ROOT_PATH_NS(@"/Library/Application Support/%@.bundle"), @"YTNoAds"]];
+        // 1. Sideloaded IPA — bundle is inside YouTube.app itself.
+        NSString *inAppPath = [[NSBundle mainBundle] pathForResource:@"YTNoAds" ofType:@"bundle"];
+        if (inAppPath) {
+            bundle = [NSBundle bundleWithPath:inAppPath];
+            return;
+        }
+        // 2. Jailbroken — search rootful, rootless (/var/jb), and roothide paths.
+        NSArray<NSString *> *searchPaths = @[
+            @"/Library/Application Support/YTNoAds.bundle",
+            @"/var/jb/Library/Application Support/YTNoAds.bundle",
+        ];
+        NSFileManager *fm = [NSFileManager defaultManager];
+        for (NSString *path in searchPaths) {
+            if ([fm fileExistsAtPath:path]) {
+                bundle = [NSBundle bundleWithPath:path];
+                return;
+            }
+        }
     });
     return bundle;
 }
