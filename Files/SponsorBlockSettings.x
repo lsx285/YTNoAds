@@ -521,16 +521,19 @@ static const NSInteger kSBSectionCategory = 'ytsb';
     icon.iconType = 530;
     openItem.settingIcon = icon;
 
+    NSMutableArray<YTSettingsSectionItem *> *sectionItems =
+        [NSMutableArray arrayWithObject:openItem];
+
     if ([settingsVC respondsToSelector:
             @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)])
-        [settingsVC setSectionItems:@[openItem]
+        [settingsVC setSectionItems:sectionItems
                         forCategory:kSBSectionCategory
                               title:@"SponsorBlock"
                                icon:icon
                    titleDescription:nil
                        headerHidden:NO];
     else
-        [settingsVC setSectionItems:@[openItem]
+        [settingsVC setSectionItems:sectionItems
                         forCategory:kSBSectionCategory
                               title:@"SponsorBlock"
                    titleDescription:nil
