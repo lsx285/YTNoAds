@@ -358,7 +358,7 @@ static NSMutableArray <YTIItemSectionRenderer *> *filteredArray(NSArray <YTIItem
 - (NSData *)elementData {
     NSString *description = [self description];
     NSString *adString = getAdString(description);
-    if (adString) return nil;
+    if (adString) return [NSData data];
     // NSArray *shortsToRemove = @[@"shorts_shelf.eml", @"shorts_video_cell.eml", @"6Shorts", @"eml.shorts-shelf"];
     // for (NSString *shorts in shortsToRemove) {
     //     if (IS_ENABLED(HideShortsShelf) && [description containsString:shorts] && ![description containsString:@"history*"]) {
