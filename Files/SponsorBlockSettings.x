@@ -5,33 +5,24 @@
 
 extern UIColor *SBColorFromHex(NSString *hexString);
 
-static NSBundle *SBSettingsBundle() {
-    static NSBundle *bundle = nil;
+static NSString *SBCategoryName(NSString *category) {
+    static NSDictionary *names;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        // 1. Sideloaded IPA — bundle is inside YouTube.app itself.
-        NSString *inAppPath = [[NSBundle mainBundle] pathForResource:@"YTNoAds" ofType:@"bundle"];
-        if (inAppPath) {
-            bundle = [NSBundle bundleWithPath:inAppPath];
-            return;
-        }
-        // 2. Jailbroken — search rootful, rootless (/var/jb), and roothide paths.
-        NSArray<NSString *> *searchPaths = @[
-            @"/Library/Application Support/YTNoAds.bundle",
-            @"/var/jb/Library/Application Support/YTNoAds.bundle",
-        ];
-        NSFileManager *fm = [NSFileManager defaultManager];
-        for (NSString *path in searchPaths) {
-            if ([fm fileExistsAtPath:path]) {
-                bundle = [NSBundle bundleWithPath:path];
-                return;
-            }
-        }
+        names = @{
+            @"sponsor":        @"Sponsor",
+            @"intro":          @"Intro",
+            @"outro":          @"Endcards",
+            @"interaction":    @"Interaction",
+            @"selfpromo":      @"Self-promotion",
+            @"music_offtopic": @"Non-music",
+            @"preview":        @"Preview",
+            @"poi_highlight":  @"Highlight",
+            @"filler":         @"Filler",
+        };
     });
-    return bundle;
+    return names[category] ?: category;
 }
-
-#define SB_LOC(x) [SBSettingsBundle() localizedStringForKey:x value:nil table:nil]
 
 static NSArray<NSString *> *sbSettingsCategories() {
     return @[@"sponsor", @"intro", @"outro", @"interaction", @"selfpromo",
@@ -40,11 +31,11 @@ static NSArray<NSString *> *sbSettingsCategories() {
 
 static NSString *SBActionName(NSInteger action) {
     switch (action) {
-        case SBSegmentActionAutoSkip: return SB_LOC(@"SB_ACTION_AUTO_SKIP");
-        case SBSegmentActionAsk:      return SB_LOC(@"SB_ACTION_ASK");
-        case SBSegmentActionDisplay:   return SB_LOC(@"SB_ACTION_DISPLAY");
-        case SBSegmentActionSkipTo:    return SB_LOC(@"SB_ACTION_SKIP_TO");
-        default:                       return SB_LOC(@"SB_ACTION_DISABLE");
+        case SBSegmentActionAutoSkip: return @"Auto-skip";
+        case SBSegmentActionAsk:      return @"Ask before skipping";
+        case SBSegmentActionDisplay:  return @"Show on seek bar only";
+        case SBSegmentActionSkipTo:   return @"Skip to segment";
+        default:                      return @"Disable";
     }
 }
 
@@ -184,8 +175,8 @@ static const void *kSBColorIndexPathKey = &kSBColorIndexPathKey;
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
     NSString *title = nil;
-    if (section == 0) title = SB_LOC(@"SB_SECTION_MAIN");
-    else if (section == 2) title = SB_LOC(@"SB_CATEGORIES_HEADER");
+    if (section == 0) title = @"Main";
+    else if (section == 2) title = @"Segment categories";
     if (!title) return nil;
 
     UIView *header = [[UIView alloc] init];
@@ -238,13 +229,13 @@ static const void *kSBColorIndexPathKey = &kSBColorIndexPathKey;
 
     NSString *title, *desc, *key;
     switch (row) {
-        case 0: title = SB_LOC(@"SB_ENABLE"); desc = SB_LOC(@"SB_ENABLE_DESC"); key = SBEnabled; break;
-        case 1: title = SB_LOC(@"SB_SHOW_BUTTON"); desc = SB_LOC(@"SB_SHOW_BUTTON_DESC"); key = SBShowButton; break;
-        case 2: title = SB_LOC(@"SB_SHOW_NOTIFICATIONS"); desc = SB_LOC(@"SB_SHOW_NOTIFICATIONS_DESC"); key = SBShowNotifications; break;
-        case 3: title = SB_LOC(@"SB_SEGMENTS_IN_FEED"); desc = SB_LOC(@"SB_SEGMENTS_IN_FEED_DESC"); key = SBSegmentsInFeed; break;
-        case 4: title = SB_LOC(@"SB_SEGMENTS_IN_MINIPLAYER"); desc = SB_LOC(@"SB_SEGMENTS_IN_MINIPLAYER_DESC"); key = SBSegmentsInMiniPlayer; break;
-        case 5: title = SB_LOC(@"SB_HAPTIC_FEEDBACK"); desc = SB_LOC(@"SB_HAPTIC_FEEDBACK_DESC"); key = SBAudioNotification; break;
-        default: title = SB_LOC(@"SB_SHOW_DURATION"); desc = SB_LOC(@"SB_SHOW_DURATION_DESC"); key = SBShowDuration; break;
+        case 0: title = @"Enable SponsorBlock"; desc = @"Activate the SponsorBlock extension to skip sponsored segments."; key = SBEnabled; break;
+        case 1: title = @"Show overlay button"; desc = @"Display a SponsorBlock toggle button in the player overlay."; key = SBShowButton; break;
+        case 2: title = @"Show notifications"; desc = @"Display notifications when segments are skipped. Notifications for manual-skip categories are always shown."; key = SBShowNotifications; break;
+        case 3: title = @"Segments in feed"; desc = @"Display colored segments on the progress bar of players in the feed."; key = SBSegmentsInFeed; break;
+        case 4: title = @"Segments in mini-player"; desc = @"Display colored segments on the progress bar of the mini-player."; key = SBSegmentsInMiniPlayer; break;
+        case 5: title = @"Haptic feedback"; desc = @"Provide haptic feedback when a segment is skipped."; key = SBAudioNotification; break;
+        default: title = @"Show duration without segments"; desc = @"Display the total video duration excluding skippable segments."; key = SBShowDuration; break;
     }
 
     cell.textLabel.text = title;
@@ -281,7 +272,7 @@ static const void *kSBColorIndexPathKey = &kSBColorIndexPathKey;
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
-    NSString *title = (row == 0) ? SB_LOC(@"SB_SKIP_ALERT_DURATION") : SB_LOC(@"SB_UNSKIP_ALERT_DURATION");
+    NSString *title = (row == 0) ? @"Skip Alert Duration" : @"Unskip Alert Duration";
     NSString *key = (row == 0) ? SBSkipAlertDuration : SBUnskipAlertDuration;
     float currentVal = [[NSUserDefaults standardUserDefaults] floatForKey:key];
     if (currentVal <= 0) currentVal = 4.0;
@@ -347,9 +338,7 @@ static const void *kSBColorIndexPathKey = &kSBColorIndexPathKey;
     NSInteger catIndex = row / 2;
     BOOL isColorRow = (row % 2 == 1);
     NSString *category = sbSettingsCategories()[catIndex];
-    NSBundle *bundle = SBSettingsBundle();
-    NSString *catLocKey = [NSString stringWithFormat:@"SB_CAT_%@", category];
-    NSString *catName = [bundle localizedStringForKey:catLocKey value:category table:nil];
+    NSString *catName = SBCategoryName(category);
 
     if (isColorRow) {
         return [self colorCellForCategory:category name:catName tableView:tableView];
@@ -379,23 +368,16 @@ static const void *kSBColorIndexPathKey = &kSBColorIndexPathKey;
     menuButton.tintColor = [self sbSecondaryTextColor];
 
     NSMutableArray *menuActions = [NSMutableArray array];
-    NSArray *actionDefs;
+    NSArray<NSNumber *> *actionVals;
     if (isHighlight) {
-        actionDefs = @[@[@(SBSegmentActionDisable), @"SB_ACTION_DISABLE"],
-                       @[@(SBSegmentActionSkipTo), @"SB_ACTION_SKIP_TO"],
-                       @[@(SBSegmentActionDisplay), @"SB_ACTION_DISPLAY"]];
+        actionVals = @[@(SBSegmentActionDisable), @(SBSegmentActionSkipTo), @(SBSegmentActionDisplay)];
     } else {
-        actionDefs = @[@[@(SBSegmentActionDisable), @"SB_ACTION_DISABLE"],
-                       @[@(SBSegmentActionAutoSkip), @"SB_ACTION_AUTO_SKIP"],
-                       @[@(SBSegmentActionAsk), @"SB_ACTION_ASK"],
-                       @[@(SBSegmentActionDisplay), @"SB_ACTION_DISPLAY"]];
+        actionVals = @[@(SBSegmentActionDisable), @(SBSegmentActionAutoSkip), @(SBSegmentActionAsk), @(SBSegmentActionDisplay)];
     }
 
-    NSBundle *bundle = SBSettingsBundle();
-    for (NSArray *def in actionDefs) {
-        NSInteger actionVal = [def[0] integerValue];
-        NSString *locKey = def[1];
-        NSString *actionTitle = [bundle localizedStringForKey:locKey value:nil table:nil];
+    for (NSNumber *actionNum in actionVals) {
+        NSInteger actionVal = [actionNum integerValue];
+        NSString *actionTitle = SBActionName(actionVal);
         UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:14];
         UIImage *checkImage = (actionVal == currentAction) ? [UIImage systemImageNamed:@"checkmark" withConfiguration:config] : nil;
 
@@ -419,7 +401,7 @@ static const void *kSBColorIndexPathKey = &kSBColorIndexPathKey;
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    cell.textLabel.text = [NSString stringWithFormat:@"%@ %@", catName, SB_LOC(@"SB_SEGMENT_COLOR_SUFFIX")];
+    cell.textLabel.text = [NSString stringWithFormat:@"%@ segment color", catName];
     cell.textLabel.textColor = [self sbTextColor];
     cell.textLabel.font = [UIFont systemFontOfSize:15];
 
@@ -445,8 +427,8 @@ static const void *kSBColorIndexPathKey = &kSBColorIndexPathKey;
     self.activeColorIndexPath = indexPath;
 
     UIColorPickerViewController *picker = [[UIColorPickerViewController alloc] init];
-    NSString *catName = [SBSettingsBundle() localizedStringForKey:[NSString stringWithFormat:@"SB_CAT_%@", category] value:category table:nil];
-    picker.title = [NSString stringWithFormat:@"%@ %@", catName, SB_LOC(@"SB_SEGMENT_COLOR_SUFFIX")];
+    NSString *catName = SBCategoryName(category);
+    picker.title = [NSString stringWithFormat:@"%@ segment color", catName];
     NSString *currentHex = [[NSUserDefaults standardUserDefaults] stringForKey:colorKey];
     if (currentHex) picker.selectedColor = SBColorFromHex(currentHex);
     picker.supportsAlpha = NO;

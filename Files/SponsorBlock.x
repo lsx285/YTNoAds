@@ -35,6 +35,25 @@ UIColor *SBColorFromHex(NSString *hexString) {
                            alpha:1.0];
 }
 
+static NSString *SBLocalizedCategoryName(NSString *category) {
+    static NSDictionary *names;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        names = @{
+            @"sponsor":        @"Sponsor",
+            @"intro":          @"Intro",
+            @"outro":          @"Endcards",
+            @"interaction":    @"Interaction",
+            @"selfpromo":      @"Self-promotion",
+            @"music_offtopic": @"Non-music",
+            @"preview":        @"Preview",
+            @"poi_highlight":  @"Highlight",
+            @"filler":         @"Filler",
+        };
+    });
+    return names[category] ?: category;
+}
+
 #pragma mark - SBSegment Implementation
 
 @implementation SBSegment
@@ -269,10 +288,9 @@ UIColor *SBColorFromHex(NSString *hexString) {
     }
 
     if (IS_ENABLED(SBShowNotifications)) {
-        NSBundle *bundle = [NSBundle bundleWithPath:[[NSBundle mainBundle] pathForResource:@"YTNoAds" ofType:@"bundle"]];
-        NSString *catName = [bundle localizedStringForKey:[NSString stringWithFormat:@"SB_CAT_%@", segment.category] value:segment.category table:nil];
-        NSString *message = [NSString stringWithFormat:[bundle localizedStringForKey:@"SB_SKIPPED" value:@"%@ skipped" table:nil], catName];
-        NSString *unskipTitle = [bundle localizedStringForKey:@"SB_UNSKIP" value:@"Unskip" table:nil];
+        NSString *catName = SBLocalizedCategoryName(segment.category);
+        NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped", catName];
+        NSString *unskipTitle = @"Unskip";
 
         float alertDuration = FLOAT_FOR_KEY(SBUnskipAlertDuration);
         if (alertDuration <= 0) alertDuration = 3.0;
@@ -300,9 +318,8 @@ UIColor *SBColorFromHex(NSString *hexString) {
 - (void)sbShowAskNotification:(SBSegment *)segment {
     [self.sbSkippedSegments addObject:segment.UUID];
 
-    NSBundle *bundle = [NSBundle bundleWithPath:[[NSBundle mainBundle] pathForResource:@"YTNoAds" ofType:@"bundle"]];
-    NSString *catName = [bundle localizedStringForKey:[NSString stringWithFormat:@"SB_CAT_%@", segment.category] value:segment.category table:nil];
-    NSString *message = [NSString stringWithFormat:[bundle localizedStringForKey:@"SB_DETECTED" value:@"%@ detected" table:nil], catName];
+    NSString *catName = SBLocalizedCategoryName(segment.category);
+    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip the segment?", catName];
 
     float alertDuration = FLOAT_FOR_KEY(SBSkipAlertDuration);
     if (alertDuration <= 0) alertDuration = 5.0;
@@ -311,7 +328,7 @@ UIColor *SBColorFromHex(NSString *hexString) {
     __weak typeof(self) weakSelf = self;
     self.sbNotificationView = [SBSkipNotificationView showInView:parentView
         message:message
-        buttonTitle:[bundle localizedStringForKey:@"SB_SKIP_NOW" value:@"Skip" table:nil]
+        buttonTitle:@"Skip"
         action:^{
             __strong typeof(weakSelf) ss = weakSelf;
             if (ss) [ss seekToTime:(CGFloat)segment.endTime];
@@ -323,9 +340,8 @@ UIColor *SBColorFromHex(NSString *hexString) {
 - (void)sbShowHighlightBannerIfNeeded:(NSArray<SBSegment *> *)segments {
     for (SBSegment *seg in segments) {
         if ([seg.category isEqualToString:@"poi_highlight"] && [seg configuredAction] == SBSegmentActionSkipTo) {
-            NSBundle *bundle = [NSBundle bundleWithPath:[[NSBundle mainBundle] pathForResource:@"YTNoAds" ofType:@"bundle"]];
-            NSString *message = [bundle localizedStringForKey:@"SB_JUMP_TO_HIGHLIGHT" value:@"Highlight available. Jump to the point?" table:nil];
-            NSString *skipTitle = [bundle localizedStringForKey:@"SB_SKIP_NOW" value:@"Skip" table:nil];
+            NSString *message = @"Highlight available. Jump to the point?";
+            NSString *skipTitle = @"Skip";
             UIView *parentView = self.playerView;
             self.sbNotificationView = [SBSkipNotificationView showInView:parentView
                 message:message
@@ -344,10 +360,8 @@ UIColor *SBColorFromHex(NSString *hexString) {
             [self seekToTime:(CGFloat)segment.startTime];
 
             if (IS_ENABLED(SBShowNotifications)) {
-                NSBundle *bundle = [NSBundle bundleWithPath:[[NSBundle mainBundle] pathForResource:@"YTNoAds" ofType:@"bundle"]];
-                NSString *message = [bundle localizedStringForKey:@"SB_JUMPED_TO_HIGHLIGHT" value:@"Jumped to highlight" table:nil];
                 self.sbNotificationView = [SBSkipNotificationView showInView:self.playerView
-                    message:message
+                    message:@"Jumped to highlight"
                     buttonTitle:nil
                     action:nil
                     duration:2.0];
