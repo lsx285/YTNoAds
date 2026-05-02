@@ -1,8 +1,8 @@
 Package: dev.lsx.ytnoads
 Name: YTNoAds
-Version: 1.0.0
+Version: 1.1.0
 Architecture: iphoneos-arm
-Description: Ad-free YouTube
+Description: Ad-free YouTube with SponsorBlock
 Maintainer: lsx
 Author: lsx
 Section: Tweaks
