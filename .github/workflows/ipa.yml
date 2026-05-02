@@ -7,18 +7,6 @@ on:
         required: true
         type: string
 
-      display_name:
-        description: "App Name"
-        default: "YouTube"
-        required: true
-        type: string
-
-      bundle_id:
-        description: "Bundle ID"
-        default: "com.google.ios.youtube"
-        required: true
-        type: string
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -33,15 +21,11 @@ jobs:
     steps:
       - name: Hide Sensitive Inputs
         uses: levibostian/action-hide-sensitive-inputs@v1
-        with:
-          exclude_inputs: bundle_id,display_name
 
       - name: Download and Validate IPA
         run: |
           wget "${{ inputs.ipa_url }}" --quiet --no-verbose -O youtube.ipa
-
           file_type=$(file --mime-type -b youtube.ipa)
-
           if [[ "$file_type" != "application/x-ios-app" && "$file_type" != "application/zip" ]]; then
             echo "::error::Validation failed: The downloaded file is not a valid IPA. Detected type: $file_type."
             exit 1
@@ -109,7 +93,7 @@ jobs:
 
       - name: Inject into IPA
         run: |
-          cyan -i youtube.ipa -o YTNoAds_${{ env.YT_VERSION }}_v${{ env.YTNOADS_VERSION }}.ipa -uwef ytnoads.deb -n "${{ inputs.display_name }}" -b ${{ inputs.bundle_id }}
+          cyan -i youtube.ipa -o YTNoAds_${{ env.YT_VERSION }}_v${{ env.YTNOADS_VERSION }}.ipa -uwef ytnoads.deb -n "YouTube" -b com.google.ios.youtube
 
       - name: Create a Draft Release
         uses: softprops/action-gh-release@v2
