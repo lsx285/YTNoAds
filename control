@@ -1,0 +1,9 @@
+Package: dev.water888.ytnoads
+Name: YTNoAds
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Ad-free YouTube
+Maintainer: Tonwalter888
+Author: Tonwalter888
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 14.0)
