@@ -41,7 +41,6 @@ static NSString *getAdString(NSString *description) {
     return nil;
 }
 
-// Removed unused `kind` parameter — was passed as 2/3/4 but never read.
 static BOOL isAdRenderer(YTIElementRenderer *elementRenderer) {
     if ([elementRenderer respondsToSelector:@selector(hasCompatibilityOptions)] &&
         elementRenderer.hasCompatibilityOptions &&
