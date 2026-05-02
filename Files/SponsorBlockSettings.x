@@ -106,6 +106,8 @@ static const NSInteger kSBSectionCategory = 'ytsb';
                     NSInteger val = [num integerValue];
                     YTActionSheetAction *action = [YTActionSheetAction actionWithTitle:SBActionName(val)
                         iconImage:nil
+                        secondaryIconImage:nil
+                        accessibilityIdentifier:nil
                         handler:^{
                             [[NSUserDefaults standardUserDefaults] setInteger:val forKey:actionKey];
                             [settingsVC reloadData];
