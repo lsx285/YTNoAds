@@ -96,29 +96,28 @@ static const NSInteger kSBSectionCategory = 'ytsb';
                 return SBActionName([[NSUserDefaults standardUserDefaults] integerForKey:actionKey]);
             }
             selectBlock:^BOOL(YTSettingsCell *cell, NSUInteger arg1) {
-                NSMutableArray<YTActionSheetAction *> *actions = [NSMutableArray array];
-
                 NSArray<NSNumber *> *actionVals = isHighlight
                     ? @[@(SBSegmentActionDisable), @(SBSegmentActionSkipTo), @(SBSegmentActionDisplay)]
                     : @[@(SBSegmentActionDisable), @(SBSegmentActionAutoSkip), @(SBSegmentActionAsk), @(SBSegmentActionDisplay)];
 
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:catName
+                    message:nil
+                    preferredStyle:UIAlertControllerStyleActionSheet];
+
                 for (NSNumber *num in actionVals) {
                     NSInteger val = [num integerValue];
-                    YTActionSheetAction *action = [YTActionSheetAction actionWithTitle:SBActionName(val)
-                        iconImage:nil
-                        secondaryIconImage:nil
-                        accessibilityIdentifier:nil
-                        handler:^{
+                    UIAlertAction *action = [UIAlertAction actionWithTitle:SBActionName(val)
+                        style:UIAlertActionStyleDefault
+                        handler:^(UIAlertAction *a) {
                             [[NSUserDefaults standardUserDefaults] setInteger:val forKey:actionKey];
                             [settingsVC reloadData];
                         }
                     ];
-                    [actions addObject:action];
+                    [alert addAction:action];
                 }
 
-                YTDefaultSheetController *sheet = [YTDefaultSheetController sheetControllerWithParentResponder:settingsVC];
-                for (YTActionSheetAction *a in actions) [sheet addAction:a];
-                [sheet presentFromViewController:settingsVC animated:YES completion:nil];
+                [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+                [settingsVC presentViewController:alert animated:YES completion:nil];
                 return YES;
             }
         ];
