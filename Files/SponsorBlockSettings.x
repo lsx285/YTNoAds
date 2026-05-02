@@ -488,8 +488,6 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 
 // ─── Hook: register top-level section & push the VC on tap ───────────────────
 
-static const NSInteger kSBSectionCategory = 'ytsb';
-
 @interface YTSettingsSectionItemManager (SponsorBlock)
 - (void)updateSponsorBlockSectionWithEntry:(id)entry;
 @end
