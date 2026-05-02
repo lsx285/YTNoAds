@@ -1,14 +1,12 @@
 // SponsorBlockSettings.x — YTNoAds
-// Full SponsorBlock settings UI (YouMod-style: sliders, rainbow color circles,
-// per-category dropdowns) surfaced as a native YouTube settings push from the
-// top-level SponsorBlock section registered in Settings.x.
+// Full SponsorBlock settings UI surfaced as a native YouTube settings push.
 #import "Headers.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
 
 extern UIColor *SBColorFromHex(NSString *hexString);
 
-// ─── Hardcoded English strings (no bundle / PSHeader needed) ─────────────────
+// ─── String helpers ───────────────────────────────────────────────────────────
 
 static NSString *SBCategoryName(NSString *category) {
     static NSDictionary *names;
@@ -42,17 +40,31 @@ static NSString *SBActionLabel(NSInteger action) {
 static NSString *SBHexFromColor(UIColor *color) {
     CGFloat r, g, b, a;
     [color getRed:&r green:&g blue:&b alpha:&a];
-    return [NSString stringWithFormat:@"#%02X%02X%02X",
-            (int)(r * 255), (int)(g * 255), (int)(b * 255)];
+    return [NSString stringWithFormat:@"#%02X%02X%02X", (int)(r*255), (int)(g*255), (int)(b*255)];
 }
 
 static NSArray<NSString *> *SBCategories() {
     return @[@"sponsor", @"intro", @"outro", @"interaction",
-             @"selfpromo", @"music_offtopic", @"preview",
-             @"poi_highlight", @"filler"];
+             @"selfpromo", @"music_offtopic", @"preview", @"poi_highlight", @"filler"];
 }
 
-// ─── Rainbow + filled-center color circle ────────────────────────────────────
+// Calls the nearest YTStyledViewController (or UIViewController) super implementation.
+// Necessary because SBSettingsViewController's class pair is remapped at runtime.
+#define SB_SUPER_VOID(sel) \
+    do { \
+        Class _base = objc_getClass("YTStyledViewController") ?: [UIViewController class]; \
+        struct objc_super _sup = { self, _base }; \
+        ((void (*)(struct objc_super *, SEL))objc_msgSendSuper)(&_sup, @selector(sel)); \
+    } while (0)
+
+#define SB_SUPER_BOOL(sel, val) \
+    do { \
+        Class _base = objc_getClass("YTStyledViewController") ?: [UIViewController class]; \
+        struct objc_super _sup = { self, _base }; \
+        ((void (*)(struct objc_super *, SEL, BOOL))objc_msgSendSuper)(&_sup, @selector(sel), val); \
+    } while (0)
+
+// ─── Rainbow + filled-center color circle ─────────────────────────────────────
 
 @interface SBColorCircleView : UIView
 @property (nonatomic, strong) UIColor *fillColor;
@@ -63,38 +75,30 @@ static NSArray<NSString *> *SBCategories() {
 
 - (instancetype)initWithFrame:(CGRect)frame color:(UIColor *)color {
     self = [super initWithFrame:frame];
-    if (self) {
-        _fillColor = color;
-        self.backgroundColor = [UIColor clearColor];
-    }
+    if (self) { _fillColor = color; self.backgroundColor = [UIColor clearColor]; }
     return self;
 }
 
 - (void)drawRect:(CGRect)rect {
     CGContextRef ctx = UIGraphicsGetCurrentContext();
-    CGFloat size = MIN(rect.size.width, rect.size.height);
-    CGRect sq = CGRectMake((rect.size.width - size) / 2,
-                           (rect.size.height - size) / 2, size, size);
-    CGFloat cx = CGRectGetMidX(sq), cy = CGRectGetMidY(sq);
-    CGFloat ringW = 3.0, radius = (size - ringW) / 2.0;
+    CGFloat size   = MIN(rect.size.width, rect.size.height);
+    CGRect  sq     = CGRectMake((rect.size.width  - size) / 2,
+                                (rect.size.height - size) / 2, size, size);
+    CGFloat cx     = CGRectGetMidX(sq), cy = CGRectGetMidY(sq);
+    CGFloat ringW  = 3.0, radius = (size - ringW) / 2.0;
+    CGFloat step   = (2.0 * M_PI) / 64;
 
-    NSInteger segs = 64;
-    CGFloat step = (2.0 * M_PI) / segs;
-    for (NSInteger i = 0; i < segs; i++) {
+    for (NSInteger i = 0; i < 64; i++) {
         CGFloat start = i * step - M_PI_2;
-        CGFloat end   = start + step + 0.02;
-        UIColor *c = [UIColor colorWithHue:(CGFloat)i / segs
-                                saturation:1.0 brightness:1.0 alpha:1.0];
-        CGContextSetStrokeColorWithColor(ctx, c.CGColor);
+        CGContextSetStrokeColorWithColor(ctx,
+            [UIColor colorWithHue:(CGFloat)i / 64 saturation:1 brightness:1 alpha:1].CGColor);
         CGContextSetLineWidth(ctx, ringW);
-        CGContextAddArc(ctx, cx, cy, radius, start, end, 0);
+        CGContextAddArc(ctx, cx, cy, radius, start, start + step + 0.02, 0);
         CGContextStrokePath(ctx);
     }
 
-    UIBezierPath *inner = [UIBezierPath
-        bezierPathWithOvalInRect:CGRectInset(sq, ringW + 2, ringW + 2)];
     [self.fillColor setFill];
-    [inner fill];
+    [[UIBezierPath bezierPathWithOvalInRect:CGRectInset(sq, ringW + 2, ringW + 2)] fill];
 }
 
 - (void)setFillColor:(UIColor *)fillColor {
@@ -116,45 +120,30 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 
 @implementation SBSettingsViewController
 
-- (UITableView *)sbTableView {
-    return objc_getAssociatedObject(self, kSBTableKey);
-}
+- (UITableView *)sbTableView { return objc_getAssociatedObject(self, kSBTableKey); }
 - (void)setSbTableView:(UITableView *)tv {
-    objc_setAssociatedObject(self, kSBTableKey, tv, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-- (NSString *)activeColorKey {
-    return objc_getAssociatedObject(self, kSBColorKey_k);
-}
+    objc_setAssociatedObject(self, kSBTableKey, tv, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+
+- (NSString *)activeColorKey { return objc_getAssociatedObject(self, kSBColorKey_k); }
 - (void)setActiveColorKey:(NSString *)k {
-    objc_setAssociatedObject(self, kSBColorKey_k, k, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-- (NSIndexPath *)activeColorIndexPath {
-    return objc_getAssociatedObject(self, kSBColorIdxKey);
-}
+    objc_setAssociatedObject(self, kSBColorKey_k, k, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+
+- (NSIndexPath *)activeColorIndexPath { return objc_getAssociatedObject(self, kSBColorIdxKey); }
 - (void)setActiveColorIndexPath:(NSIndexPath *)ip {
-    objc_setAssociatedObject(self, kSBColorIdxKey, ip, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
+    objc_setAssociatedObject(self, kSBColorIdxKey, ip, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
 
 - (UIColor *)sbTextColor {
     return (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark)
-        ? [UIColor whiteColor] : [UIColor labelColor];
+           ? [UIColor whiteColor] : [UIColor labelColor];
 }
-- (UIColor *)sbSecondaryTextColor {
-    return [UIColor colorWithWhite:0.55 alpha:1.0];
-}
-- (UIColor *)sbAccentColor {
-    return [UIColor colorWithRed:0.6 green:0.2 blue:0.9 alpha:1.0];
-}
+- (UIColor *)sbSecondaryTextColor { return [UIColor colorWithWhite:0.55 alpha:1.0]; }
+- (UIColor *)sbAccentColor        { return [UIColor colorWithRed:0.6 green:0.2 blue:0.9 alpha:1.0]; }
 
 - (void)viewDidLoad {
-    Class ytStyled = objc_getClass("YTStyledViewController");
-    struct objc_super sup = { self, ytStyled ?: [UIViewController class] };
-    ((void (*)(struct objc_super *, SEL))objc_msgSendSuper)(&sup, @selector(viewDidLoad));
-
+    SB_SUPER_VOID(viewDidLoad);
     self.title = @"SponsorBlock";
 
-    UITableView *tv = [[UITableView alloc] initWithFrame:self.view.bounds
-                                                   style:UITableViewStyleGrouped];
+    UITableView *tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
     tv.autoresizingMask   = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     tv.delegate           = self;
     tv.dataSource         = self;
@@ -162,22 +151,16 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     tv.estimatedRowHeight = 60;
     tv.rowHeight          = UITableViewAutomaticDimension;
     tv.backgroundColor    = (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark)
-        ? [UIColor blackColor] : [UIColor systemBackgroundColor];
-
+                            ? [UIColor blackColor] : [UIColor systemBackgroundColor];
     [self.view addSubview:tv];
     [self setSbTableView:tv];
 }
 
-- (void)viewWillAppear:(BOOL)animated {
-    Class ytStyled = objc_getClass("YTStyledViewController");
-    struct objc_super sup = { self, ytStyled ?: [UIViewController class] };
-    ((void (*)(struct objc_super *, SEL, BOOL))objc_msgSendSuper)(&sup,
-        @selector(viewWillAppear:), animated);
-}
+- (void)viewWillAppear:(BOOL)animated { SB_SUPER_BOOL(viewWillAppear:, animated); }
 
 #pragma mark - Table structure: 0 = toggles, 1 = sliders, 2 = categories
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 3; }
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)section {
     if (section == 0) return 7;
@@ -186,13 +169,11 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 }
 
 - (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)section {
-    NSString *title = nil;
-    if (section == 0) title = @"General";
-    if (section == 2) title = @"Categories";
+    NSString *title = (section == 0) ? @"General" : (section == 2) ? @"Categories" : nil;
     if (!title) return nil;
 
-    UIView *header = [[UIView alloc] init];
-    UILabel *label = [[UILabel alloc] init];
+    UIView  *header = [[UIView alloc] init];
+    UILabel *label  = [[UILabel alloc] init];
     label.text      = title;
     label.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
     label.font      = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
@@ -212,16 +193,13 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 - (CGFloat)tableView:(UITableView *)tv heightForRowAtIndexPath:(NSIndexPath *)indexPath {
     if (indexPath.section == 1) return 70;
     if (indexPath.section == 2) {
-        BOOL isAction  = (indexPath.row % 2 == 0);
         NSInteger catIdx = indexPath.row / 2;
-        if (isAction && catIdx > 0) return 64;
-        return 48;
+        return (indexPath.row % 2 == 0 && catIdx > 0) ? 64 : 48;
     }
     return UITableViewAutomaticDimension;
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tv
-         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+- (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     if (indexPath.section == 0) return [self toggleCellForRow:indexPath.row tableView:tv];
     if (indexPath.section == 1) return [self sliderCellForRow:indexPath.row tableView:tv];
     return [self segmentCellForRow:indexPath.row tableView:tv];
@@ -229,9 +207,26 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 
 #pragma mark - Toggle cells (section 0)
 
+// Data-driven toggle definitions — no switch needed.
+static NSDictionary *sbToggleDefAtRow(NSInteger row) {
+    static NSArray *defs;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        defs = @[
+            @{@"title": @"Enable SponsorBlock",       @"desc": @"Skip sponsored segments using community data.",              @"key": SBEnabled},
+            @{@"title": @"Show overlay button",        @"desc": @"Display a SponsorBlock toggle button in the player.",        @"key": SBShowButton},
+            @{@"title": @"Show skip notifications",    @"desc": @"Show a banner when a segment is auto-skipped.",              @"key": SBShowNotifications},
+            @{@"title": @"Segments in feed",           @"desc": @"Show colored segments on feed player progress bars.",        @"key": SBSegmentsInFeed},
+            @{@"title": @"Segments in mini-player",    @"desc": @"Show colored segments on the mini-player progress bar.",     @"key": SBSegmentsInMiniPlayer},
+            @{@"title": @"Haptic feedback",            @"desc": @"Vibrate when a segment is skipped.",                         @"key": SBAudioNotification},
+            @{@"title": @"Show duration without ads",  @"desc": @"Show video length excluding skippable segments.",            @"key": SBShowDuration},
+        ];
+    });
+    return (row >= 0 && row < (NSInteger)defs.count) ? defs[row] : nil;
+}
+
 - (UITableViewCell *)toggleCellForRow:(NSInteger)row tableView:(UITableView *)tv {
-    UITableViewCell *cell = [[UITableViewCell alloc]
-        initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     cell.backgroundColor           = [UIColor clearColor];
     cell.selectionStyle            = UITableViewCellSelectionStyleNone;
     cell.textLabel.textColor       = [self sbTextColor];
@@ -240,51 +235,34 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     cell.detailTextLabel.font      = [UIFont systemFontOfSize:13];
     cell.detailTextLabel.numberOfLines = 0;
 
-    NSString *title, *desc, *key;
-    switch (row) {
-        case 0:  title=@"Enable SponsorBlock";        desc=@"Skip sponsored segments using community data.";            key=SBEnabled; break;
-        case 1:  title=@"Show overlay button";        desc=@"Display a SponsorBlock toggle button in the player.";     key=SBShowButton; break;
-        case 2:  title=@"Show skip notifications";    desc=@"Show a banner when a segment is auto-skipped.";           key=SBShowNotifications; break;
-        case 3:  title=@"Segments in feed";           desc=@"Show colored segments on feed player progress bars.";     key=SBSegmentsInFeed; break;
-        case 4:  title=@"Segments in mini-player";    desc=@"Show colored segments on the mini-player progress bar.";  key=SBSegmentsInMiniPlayer; break;
-        case 5:  title=@"Haptic feedback";            desc=@"Vibrate when a segment is skipped.";                      key=SBAudioNotification; break;
-        default: title=@"Show duration without ads";  desc=@"Show video length excluding skippable segments.";         key=SBShowDuration; break;
-    }
-
-    cell.textLabel.text       = title;
-    cell.detailTextLabel.text = desc;
+    NSDictionary *def = sbToggleDefAtRow(row);
+    cell.textLabel.text       = def[@"title"];
+    cell.detailTextLabel.text = def[@"desc"];
 
     UISwitch *sw   = [[UISwitch alloc] init];
-    sw.on          = [[NSUserDefaults standardUserDefaults] boolForKey:key];
+    sw.on          = [[NSUserDefaults standardUserDefaults] boolForKey:def[@"key"]];
     sw.onTintColor = [self sbAccentColor];
     sw.tag         = row;
-    [sw addTarget:self action:@selector(toggleChanged:)
-         forControlEvents:UIControlEventValueChanged];
+    [sw addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
     cell.accessoryView = sw;
     return cell;
 }
 
 - (void)toggleChanged:(UISwitch *)sender {
-    NSString *keys[] = {
-        SBEnabled, SBShowButton, SBShowNotifications,
-        SBSegmentsInFeed, SBSegmentsInMiniPlayer,
-        SBAudioNotification, SBShowDuration
-    };
-    if (sender.tag >= 0 && sender.tag < 7)
-        [[NSUserDefaults standardUserDefaults] setBool:sender.on forKey:keys[sender.tag]];
+    NSDictionary *def = sbToggleDefAtRow(sender.tag);
+    if (def) [[NSUserDefaults standardUserDefaults] setBool:sender.on forKey:def[@"key"]];
 }
 
 #pragma mark - Slider cells (section 1)
 
 - (UITableViewCell *)sliderCellForRow:(NSInteger)row tableView:(UITableView *)tv {
-    UITableViewCell *cell = [[UITableViewCell alloc]
-        initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle  = UITableViewCellSelectionStyleNone;
 
-    NSString *title = (row == 0) ? @"Skip alert duration" : @"Unskip alert duration";
-    NSString *key   = (row == 0) ? SBSkipAlertDuration    : SBUnskipAlertDuration;
-    float cur = [[NSUserDefaults standardUserDefaults] floatForKey:key];
+    NSString *title = (row == 0) ? @"Skip alert duration"   : @"Unskip alert duration";
+    NSString *key   = (row == 0) ? SBSkipAlertDuration       : SBUnskipAlertDuration;
+    float cur       = [[NSUserDefaults standardUserDefaults] floatForKey:key];
     if (cur <= 0) cur = 4.0;
 
     UILabel *titleLabel = [[UILabel alloc] init];
@@ -301,8 +279,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     slider.maximumTrackTintColor = [UIColor colorWithWhite:0.3 alpha:1.0];
     slider.translatesAutoresizingMaskIntoConstraints = NO;
     slider.tag = row;
-    [slider addTarget:self action:@selector(sliderChanged:)
-             forControlEvents:UIControlEventValueChanged];
+    [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
 
     UILabel *valueLabel = [[UILabel alloc] init];
     valueLabel.text          = [NSString stringWithFormat:@"%d secs", (int)cur];
@@ -344,40 +321,32 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 #pragma mark - Category cells (section 2)
 
 - (UITableViewCell *)segmentCellForRow:(NSInteger)row tableView:(UITableView *)tv {
-    NSInteger catIdx  = row / 2;
-    BOOL isColorRow   = (row % 2 == 1);
-    NSString *cat     = SBCategories()[catIdx];
+    NSString *cat     = SBCategories()[row / 2];
     NSString *catName = SBCategoryName(cat);
-    return isColorRow
-        ? [self colorCellForCategory:cat name:catName tableView:tv]
-        : [self actionCellForCategory:cat name:catName tableView:tv];
+    return (row % 2 == 1) ? [self colorCellForCategory:cat name:catName tableView:tv]
+                           : [self actionCellForCategory:cat name:catName tableView:tv];
 }
 
-- (UITableViewCell *)actionCellForCategory:(NSString *)category
-                                      name:(NSString *)catName
-                                 tableView:(UITableView *)tv {
-    UITableViewCell *cell = [[UITableViewCell alloc]
-        initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+- (UITableViewCell *)actionCellForCategory:(NSString *)category name:(NSString *)catName tableView:(UITableView *)tv {
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle  = UITableViewCellSelectionStyleNone;
     cell.textLabel.text      = catName;
     cell.textLabel.textColor = [self sbTextColor];
     cell.textLabel.font      = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
 
-    NSString *actionKey     = SB_ACTION_KEY(category);
-    BOOL isHighlight        = [category isEqualToString:@"poi_highlight"];
-    NSInteger currentAction = [[NSUserDefaults standardUserDefaults] integerForKey:actionKey];
+    NSString  *actionKey     = SB_ACTION_KEY(category);
+    BOOL       isHighlight   = [category isEqualToString:@"poi_highlight"];
+    NSInteger  currentAction = [[NSUserDefaults standardUserDefaults] integerForKey:actionKey];
 
     UIButton *menuBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     [menuBtn setTitle:SBActionLabel(currentAction) forState:UIControlStateNormal];
     [menuBtn setTitleColor:[self sbSecondaryTextColor] forState:UIControlStateNormal];
     menuBtn.titleLabel.font          = [UIFont systemFontOfSize:15];
     menuBtn.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
-    [menuBtn setImage:[UIImage systemImageNamed:@"chevron.up.chevron.down"]
-             forState:UIControlStateNormal];
+    [menuBtn setImage:[UIImage systemImageNamed:@"chevron.up.chevron.down"] forState:UIControlStateNormal];
     menuBtn.tintColor = [self sbSecondaryTextColor];
 
-    NSMutableArray *menuActions = [NSMutableArray array];
     NSArray *actionDefs = isHighlight
         ? @[@[@(SBSegmentActionDisable), @"Disabled"],
             @[@(SBSegmentActionSkipTo),  @"Skip to"],
@@ -387,23 +356,20 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
             @[@(SBSegmentActionAsk),      @"Ask to skip"],
             @[@(SBSegmentActionDisplay),  @"Show on bar"]];
 
-    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration
-        configurationWithPointSize:14];
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:14];
+    NSMutableArray *menuActions = [NSMutableArray arrayWithCapacity:actionDefs.count];
 
     for (NSArray *def in actionDefs) {
-        NSInteger val      = [def[0] integerValue];
-        NSString *defTitle = def[1];
-        UIImage *check     = (val == currentAction)
-            ? [UIImage systemImageNamed:@"checkmark" withConfiguration:cfg] : nil;
-
-        UIAction *act = [UIAction actionWithTitle:defTitle
-                                            image:check
-                                       identifier:nil
-                                          handler:^(__kindof UIAction *a) {
+        NSInteger  val      = [def[0] integerValue];
+        BOOL       isCurrent = (val == currentAction);
+        UIAction  *act = [UIAction actionWithTitle:def[1]
+                                             image:isCurrent ? [UIImage systemImageNamed:@"checkmark" withConfiguration:cfg] : nil
+                                        identifier:nil
+                                           handler:^(__kindof UIAction *a) {
             [[NSUserDefaults standardUserDefaults] setInteger:val forKey:actionKey];
             [[self sbTableView] reloadData];
         }];
-        if (val == currentAction) act.state = UIMenuElementStateOn;
+        if (isCurrent) act.state = UIMenuElementStateOn;
         [menuActions addObject:act];
     }
 
@@ -414,68 +380,56 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     return cell;
 }
 
-- (UITableViewCell *)colorCellForCategory:(NSString *)category
-                                     name:(NSString *)catName
-                                tableView:(UITableView *)tv {
-    UITableViewCell *cell = [[UITableViewCell alloc]
-        initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+- (UITableViewCell *)colorCellForCategory:(NSString *)category name:(NSString *)catName tableView:(UITableView *)tv {
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle  = UITableViewCellSelectionStyleNone;
     cell.textLabel.text      = [NSString stringWithFormat:@"%@ color", catName];
     cell.textLabel.textColor = [self sbTextColor];
     cell.textLabel.font      = [UIFont systemFontOfSize:15];
 
-    NSString *hex  = [[NSUserDefaults standardUserDefaults]
-                      stringForKey:SB_COLOR_KEY(category)];
-    UIColor *color = SBColorFromHex(hex);
-    SBColorCircleView *circle = [[SBColorCircleView alloc]
-        initWithFrame:CGRectMake(0, 0, 34, 34) color:color];
-    cell.accessoryView = circle;
+    NSString *hex = [[NSUserDefaults standardUserDefaults] stringForKey:SB_COLOR_KEY(category)];
+    cell.accessoryView = [[SBColorCircleView alloc] initWithFrame:CGRectMake(0, 0, 34, 34)
+                                                            color:SBColorFromHex(hex)];
     return cell;
 }
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     if (indexPath.section != 2 || indexPath.row % 2 != 1) return;
 
-    NSInteger catIdx   = indexPath.row / 2;
-    NSString *cat      = SBCategories()[catIdx];
-    NSString *catName  = SBCategoryName(cat);
+    NSString *cat      = SBCategories()[indexPath.row / 2];
     NSString *colorKey = SB_COLOR_KEY(cat);
 
     [self setActiveColorKey:colorKey];
     [self setActiveColorIndexPath:indexPath];
 
     UIColorPickerViewController *picker = [[UIColorPickerViewController alloc] init];
-    picker.title         = [NSString stringWithFormat:@"%@ color", catName];
+    picker.title         = [NSString stringWithFormat:@"%@ color", SBCategoryName(cat)];
     picker.supportsAlpha = NO;
     picker.delegate      = self;
     NSString *hex = [[NSUserDefaults standardUserDefaults] stringForKey:colorKey];
     if (hex) picker.selectedColor = SBColorFromHex(hex);
-
     [self presentViewController:picker animated:YES completion:nil];
 }
 
 #pragma mark - UIColorPickerViewControllerDelegate
 
 - (void)colorPickerViewControllerDidFinish:(UIColorPickerViewController *)vc {
-    [[NSUserDefaults standardUserDefaults]
-        setObject:SBHexFromColor(vc.selectedColor) forKey:[self activeColorKey]];
+    [[NSUserDefaults standardUserDefaults] setObject:SBHexFromColor(vc.selectedColor) forKey:[self activeColorKey]];
     [[self sbTableView] reloadRowsAtIndexPaths:@[[self activeColorIndexPath]]
                               withRowAnimation:UITableViewRowAnimationNone];
 }
 
 - (void)colorPickerViewController:(UIColorPickerViewController *)vc
-                   didSelectColor:(UIColor *)color
-                       continuously:(BOOL)continuously {
+                   didSelectColor:(UIColor *)color continuously:(BOOL)continuously {
     if (!continuously) {
-        [[NSUserDefaults standardUserDefaults]
-            setObject:SBHexFromColor(color) forKey:[self activeColorKey]];
+        [[NSUserDefaults standardUserDefaults] setObject:SBHexFromColor(color) forKey:[self activeColorKey]];
         [[self sbTableView] reloadRowsAtIndexPaths:@[[self activeColorIndexPath]]
                                   withRowAnimation:UITableViewRowAnimationNone];
     }
 }
 
-#pragma mark - Footer spacing
+#pragma mark - Footer
 
 - (CGFloat)tableView:(UITableView *)tv heightForFooterInSection:(NSInteger)section {
     return (section == 2) ? 0 : 16;
@@ -485,8 +439,6 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 }
 
 @end
-
-
 
 // ─── Runtime subclass + defaults ─────────────────────────────────────────────
 
@@ -500,25 +452,21 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
             unsigned int count = 0;
             Method *methods = class_copyMethodList([SBSettingsViewController class], &count);
             for (unsigned int i = 0; i < count; i++) {
-                SEL sel        = method_getName(methods[i]);
-                IMP imp        = method_getImplementation(methods[i]);
-                const char *ty = method_getTypeEncoding(methods[i]);
-                class_addMethod(sbStyled, sel, imp, ty);
+                class_addMethod(sbStyled, method_getName(methods[i]),
+                                method_getImplementation(methods[i]),
+                                method_getTypeEncoding(methods[i]));
             }
             free(methods);
 
             unsigned int propCount = 0;
-            objc_property_t *props = class_copyPropertyList(
-                [SBSettingsViewController class], &propCount);
+            objc_property_t *props = class_copyPropertyList([SBSettingsViewController class], &propCount);
             for (unsigned int i = 0; i < propCount; i++) {
                 unsigned int attrCount = 0;
-                objc_property_attribute_t *attrs =
-                    property_copyAttributeList(props[i], &attrCount);
+                objc_property_attribute_t *attrs = property_copyAttributeList(props[i], &attrCount);
                 class_addProperty(sbStyled, property_getName(props[i]), attrs, attrCount);
                 free(attrs);
             }
             free(props);
-
             objc_registerClassPair(sbStyled);
         }
     }
