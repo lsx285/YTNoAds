@@ -19,18 +19,18 @@ NSString *SBCacheSizeFormatted() {
     @synchronized(sbSegmentCache) {
         if (sbSegmentCache.count == 0) return @"0 KB";
         for (NSString *key in sbSegmentCache) {
-            byteCount +=[key lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+            byteCount += [key lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
             for (SBSegment *seg in sbSegmentCache[key]) {
-                byteCount +=[seg.UUID lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+                byteCount += [seg.UUID lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
                 byteCount += [seg.category lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
-                byteCount +=[seg.actionType lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+                byteCount += [seg.actionType lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
                 byteCount += sizeof(float) * 2 + sizeof(SBSegmentAction) + sizeof(id);
             }
         }
     }
-    if (byteCount < 1024) return[NSString stringWithFormat:@"%lu B", (unsigned long)byteCount];
-    if (byteCount < 1024 * 1024) return[NSString stringWithFormat:@"%.1f KB", byteCount / 1024.0];
-    return[NSString stringWithFormat:@"%.1f MB", byteCount / (1024.0 * 1024.0)];
+    if (byteCount < 1024) return [NSString stringWithFormat:@"%lu B", (unsigned long)byteCount];
+    if (byteCount < 1024 * 1024) return [NSString stringWithFormat:@"%.1f KB", byteCount / 1024.0];
+    return [NSString stringWithFormat:@"%.1f MB", byteCount / (1024.0 * 1024.0)];
 }
 
 static NSArray<NSString *> *sbEnabledCategories() {
@@ -43,10 +43,10 @@ static NSArray<NSString *> *sbEnabledCategories() {
 }
 
 UIColor *SBColorFromHex(NSString *hex) {
-    if (hex.length < 7) return[UIColor whiteColor];
+    if (hex.length < 7) return [UIColor whiteColor];
     unsigned int val = 0;
     [[NSScanner scannerWithString:[hex substringFromIndex:1]] scanHexInt:&val];
-    return[UIColor colorWithRed:((val >> 16) & 0xFF) / 255.0
+    return [UIColor colorWithRed:((val >> 16) & 0xFF) / 255.0
                            green:((val >>  8) & 0xFF) / 255.0
                             blue:( val        & 0xFF) / 255.0
                            alpha:1.0];
@@ -76,7 +76,7 @@ UIColor *SBColorFromHex(NSString *hex) {
     }
     NSArray *categories = sbEnabledCategories();
     if (!categories.count) { if (completion) completion(@[]); return; }
-    NSData *catJSON =[NSJSONSerialization dataWithJSONObject:categories options:0 error:nil];
+    NSData *catJSON = [NSJSONSerialization dataWithJSONObject:categories options:0 error:nil];
     NSString *catParam = [[[NSString alloc] initWithData:catJSON encoding:NSUTF8StringEncoding]
         stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
     NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:
@@ -84,7 +84,7 @@ UIColor *SBColorFromHex(NSString *hex) {
     [[[NSURLSession sharedSession] dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         NSMutableArray<SBSegment *> *segments = [NSMutableArray array];
         if (!error && data && ((NSHTTPURLResponse *)response).statusCode == 200) {
-            NSArray *json =[NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            NSArray *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([json isKindOfClass:[NSArray class]]) {
                 for (NSDictionary *item in json) {
                     NSArray *seg = item[@"segment"];
@@ -136,7 +136,8 @@ UIColor *SBColorFromHex(NSString *hex) {
 }
 
 - (void)singleVideo:(id)video currentVideoTimeDidChange:(id)time {
-    %orig;[self sbHandleTimeChange];
+    %orig;
+    [self sbHandleTimeChange];
 }
 
 - (void)potentiallyMutatedSingleVideo:(id)video currentVideoTimeDidChange:(id)time {
@@ -164,9 +165,11 @@ UIColor *SBColorFromHex(NSString *hex) {
     self.sbShowNotifications = IS_ENABLED(SBShowNotifications);
     self.sbSnappingEnabled = IS_ENABLED(SBSnappingEnabled);
     self.sbSkipAlertDuration = FLOAT_FOR_KEY(SBSkipAlertDuration) > 0 ? FLOAT_FOR_KEY(SBSkipAlertDuration) : 4.0;
-    self.sbUnskipAlertDuration = FLOAT_FOR_KEY(SBUnskipAlertDuration) > 0 ? FLOAT_FOR_KEY(SBUnskipAlertDuration) : 4.0;[self.sbNotificationView dismiss];
+    self.sbUnskipAlertDuration = FLOAT_FOR_KEY(SBUnskipAlertDuration) > 0 ? FLOAT_FOR_KEY(SBUnskipAlertDuration) : 4.0;
+    [self.sbNotificationView dismiss];
     
-    __weak typeof(self) weakSelf = self;[SBRequest fetchSegmentsForVideoID:videoID completion:^(NSArray<SBSegment *> *segments) {
+    __weak typeof(self) weakSelf = self;
+    [SBRequest fetchSegmentsForVideoID:videoID completion:^(NSArray<SBSegment *> *segments) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
         strongSelf.sbSegments = segments;
@@ -193,13 +196,18 @@ UIColor *SBColorFromHex(NSString *hex) {
         for (SBSegment *segment in self.sbSegments) {
             if (segment.action == SBSegmentActionDisable) continue;
             
-            if (fabs(currentTime - segment.startTime) < 1.0 && fabs(currentTime - segment.startTime) > 0.1) {
+            CGFloat snapTolerance = 2.5;
+
+            if (fabs(currentTime - segment.startTime) < snapTolerance && fabs(currentTime - segment.startTime) > 0.1) {
+                if (self.sbHapticFeedback) AudioServicesPlaySystemSound(SB_HAPTIC_SOUND_ID);
                 self.sbLastSeenTime = segment.startTime;
                 [self seekToTime:segment.startTime];
                 return;
             }
-            if (fabs(currentTime - segment.endTime) < 1.0 && fabs(currentTime - segment.endTime) > 0.1) {
-                self.sbLastSeenTime = segment.endTime;[self seekToTime:segment.endTime];
+            if (fabs(currentTime - segment.endTime) < snapTolerance && fabs(currentTime - segment.endTime) > 0.1) {
+                if (self.sbHapticFeedback) AudioServicesPlaySystemSound(SB_HAPTIC_SOUND_ID);
+                self.sbLastSeenTime = segment.endTime;
+                [self seekToTime:segment.endTime];
                 return;
             }
         }
@@ -212,7 +220,8 @@ UIColor *SBColorFromHex(NSString *hex) {
         if (segment.endTime - segment.startTime < self.sbMinDuration) continue;
         if (currentTime < segment.startTime || currentTime >= segment.endTime - 0.5) continue;
         
-        if (isManualSeek) {[self.sbIgnoredSegments addObject:segment.UUID];
+        if (isManualSeek) {
+            [self.sbIgnoredSegments addObject:segment.UUID];
             continue;
         }
 
@@ -227,12 +236,13 @@ UIColor *SBColorFromHex(NSString *hex) {
 
 %new
 - (void)sbPerformSkip:(SBSegment *)segment {
-    [self.sbSkippedSegments addObject:segment.UUID];[self seekToTime:(CGFloat)segment.endTime];
+    [self.sbSkippedSegments addObject:segment.UUID];
+    [self seekToTime:(CGFloat)segment.endTime];
     
     if (self.sbHapticFeedback) AudioServicesPlaySystemSound(SB_HAPTIC_SOUND_ID);
     if (!self.sbShowNotifications) return;
     
-    NSString *message =[NSString stringWithFormat:@"%@ segment has been skipped", SBCategoryName(segment.category)];
+    NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped", SBCategoryName(segment.category)];
     float startTime = segment.startTime;
     NSString *segmentUUID = segment.UUID;
     
@@ -240,14 +250,15 @@ UIColor *SBColorFromHex(NSString *hex) {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(SB_NOTIFICATION_DELAY * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
-        strongSelf.sbNotificationView =[SBSkipNotificationView
+        strongSelf.sbNotificationView = [SBSkipNotificationView
             showInView:strongSelf.playerView
                message:message
            buttonTitle:@"Unskip"
                 action:^{ 
                     __strong typeof(weakSelf) ss = weakSelf; 
                     if (ss) {
-                        [ss.sbIgnoredSegments addObject:segmentUUID];[ss seekToTime:(CGFloat)startTime]; 
+                        [ss.sbIgnoredSegments addObject:segmentUUID];
+                        [ss seekToTime:(CGFloat)startTime]; 
                     }
                 }
               duration:strongSelf.sbUnskipAlertDuration];
@@ -257,11 +268,11 @@ UIColor *SBColorFromHex(NSString *hex) {
 %new
 - (void)sbShowAskNotification:(SBSegment *)segment {
     [self.sbSkippedSegments addObject:segment.UUID];
-    NSString *message =[NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip?", SBCategoryName(segment.category)];
+    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip?", SBCategoryName(segment.category)];
     float endTime = segment.endTime;
     
     __weak typeof(self) weakSelf = self;
-    self.sbNotificationView =[SBSkipNotificationView
+    self.sbNotificationView = [SBSkipNotificationView
         showInView:self.playerView
            message:message
        buttonTitle:@"Skip"
