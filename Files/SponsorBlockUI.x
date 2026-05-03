@@ -191,7 +191,6 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
         if (!segments.count) return;
 
         CGFloat totalTime = [self currentVideoTotalMediaTime];
-        CGFloat barWidth  = playerBar.bounds.size.width;
         if (totalTime <= 0) return;
 
         UIView *referenceView = nil, *scrubberView = nil;
