@@ -1,8 +1,6 @@
 #import "Headers.h"
 #import <AudioToolbox/AudioToolbox.h>
 
-// Forward-declare %new methods so the compiler can see them when called
-// from earlier hooks in the same %hook block.
 @interface YTPlayerViewController (SBInternal)
 - (void)sbLoadSegmentsForVideoID:(NSString *)videoID;
 - (void)sbHandleTimeChange;
@@ -22,10 +20,10 @@ static NSArray<NSString *> *sbAllCategories() {
 
 static NSArray<NSString *> *sbEnabledCategories() {
     NSMutableArray *enabled = [NSMutableArray array];
-    for (NSString *cat in sbAllCategories()) {
-        if ([[NSUserDefaults standardUserDefaults] integerForKey:SB_ACTION_KEY(cat)] != SBSegmentActionDisable)
+    NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+    for (NSString *cat in sbAllCategories())
+        if ([ud integerForKey:SB_ACTION_KEY(cat)] != SBSegmentActionDisable)
             [enabled addObject:cat];
-    }
     return enabled;
 }
 
@@ -58,18 +56,16 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     return names[category] ?: category;
 }
 
-#pragma mark - SBSegment
-
 @implementation SBSegment
 
 + (instancetype)segmentWithUUID:(NSString *)UUID category:(NSString *)category
                           start:(float)start end:(float)end action:(NSString *)actionType {
-    SBSegment *seg  = [[SBSegment alloc] init];
-    seg.UUID        = UUID;
-    seg.category    = category;
-    seg.startTime   = start;
-    seg.endTime     = end;
-    seg.actionType  = actionType;
+    SBSegment *seg = [[SBSegment alloc] init];
+    seg.UUID       = UUID;
+    seg.category   = category;
+    seg.startTime  = start;
+    seg.endTime    = end;
+    seg.actionType = actionType;
     return seg;
 }
 
@@ -82,8 +78,6 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 }
 
 @end
-
-#pragma mark - SBRequest
 
 @implementation SBRequest
 
@@ -98,31 +92,28 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     NSArray *categories = sbEnabledCategories();
     if (!categories.count) { if (completion) completion(@[]); return; }
 
-    NSData   *catJSON  = [NSJSONSerialization dataWithJSONObject:categories options:0 error:nil];
+    NSData *catJSON = [NSJSONSerialization dataWithJSONObject:categories options:0 error:nil];
     NSString *catParam = [[[NSString alloc] initWithData:catJSON encoding:NSUTF8StringEncoding]
-                          stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+        stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
     NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:
         @"https://sponsor.ajay.app/api/skipSegments?videoID=%@&categories=%@", videoID, catParam]];
 
     [[[NSURLSession sharedSession] dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         NSMutableArray<SBSegment *> *segments = [NSMutableArray array];
-
         if (!error && data && ((NSHTTPURLResponse *)response).statusCode == 200) {
             NSArray *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([json isKindOfClass:[NSArray class]]) {
                 for (NSDictionary *item in json) {
                     NSArray *seg = item[@"segment"];
-                    if (seg.count >= 2) {
+                    if (seg.count >= 2)
                         [segments addObject:[SBSegment segmentWithUUID:item[@"UUID"]     ?: @""
                                                               category:item[@"category"] ?: @""
                                                                  start:[seg[0] floatValue]
                                                                    end:[seg[1] floatValue]
                                                                 action:item[@"actionType"] ?: @"skip"]];
-                    }
                 }
             }
         }
-
         dispatch_async(dispatch_get_main_queue(), ^{
             @synchronized(sbSegmentCache) { sbSegmentCache[videoID] = segments; }
             if (completion) completion(segments);
@@ -132,34 +123,28 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 
 @end
 
-#pragma mark - YTPlayerViewController Hooks
-
 %hook YTPlayerViewController
-%property (nonatomic, strong) NSString        *sbLastVideoID;
-%property (nonatomic, strong) NSArray         *sbSegments;
-%property (nonatomic, strong) NSMutableSet    *sbSkippedSegments;
+%property (nonatomic, strong) NSString              *sbLastVideoID;
+%property (nonatomic, strong) NSArray               *sbSegments;
+%property (nonatomic, strong) NSMutableSet          *sbSkippedSegments;
 %property (nonatomic, strong) SBSkipNotificationView *sbNotificationView;
-%property (nonatomic, strong) UIButton        *sbOverlayButton;
-%property (nonatomic, assign) BOOL             sbEnabledForVideo;
+%property (nonatomic, strong) UIButton              *sbOverlayButton;
+%property (nonatomic, assign) BOOL                   sbEnabledForVideo;
 
-// Fires when video content changes (newer YT versions)
 - (void)setContentVideoID:(NSString *)videoID {
     %orig;
-    @try {
-        if (!IS_ENABLED(SBEnabled) || !videoID.length) return;
-        if ([self.sbLastVideoID isEqualToString:videoID] && self.sbSegments.count) return;
-        self.sbLastVideoID = videoID;
-        [self sbLoadSegmentsForVideoID:videoID];
-    } @catch (NSException *e) {}
+    if (!IS_ENABLED(SBEnabled) || !videoID.length) return;
+    if ([self.sbLastVideoID isEqualToString:videoID] && self.sbSegments.count) return;
+    self.sbLastVideoID = videoID;
+    [self sbLoadSegmentsForVideoID:videoID];
 }
 
-// Fires on video activation (older YT versions)
 - (void)playbackController:(id)pc didActivateVideo:(id)video withPlaybackData:(id)data {
     %orig;
     @try {
         if (!IS_ENABLED(SBEnabled) || self.isPlayingAd) return;
         NSString *videoID = [self contentVideoID];
-        if (!videoID) return;
+        if (!videoID.length) return;
         if ([self.sbLastVideoID isEqualToString:videoID] && self.sbSegments.count) return;
         self.sbLastVideoID = videoID;
         [self sbLoadSegmentsForVideoID:videoID];
@@ -168,16 +153,13 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 
 - (void)singleVideo:(id)video currentVideoTimeDidChange:(id)time {
     %orig;
-    @try { [self sbHandleTimeChange]; } @catch (NSException *e) {}
+    [self sbHandleTimeChange];
 }
 
-// Renamed in newer YT versions
 - (void)potentiallyMutatedSingleVideo:(id)video currentVideoTimeDidChange:(id)time {
     %orig;
-    @try { [self sbHandleTimeChange]; } @catch (NSException *e) {}
+    [self sbHandleTimeChange];
 }
-
-// ─── Shared helpers ───────────────────────────────────────────────────────────
 
 %new
 - (void)sbLoadSegmentsForVideoID:(NSString *)videoID {
@@ -191,9 +173,9 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
         strongSelf.sbSegments = segments;
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"SBSegmentsDidLoad"
+        [[NSNotificationCenter defaultCenter] postNotificationName:SBSegmentsDidLoadNotification
                                                             object:strongSelf
-                                                          userInfo:@{@"segments": segments ?: @[]}];
+                                                          userInfo:@{@"segments": segments}];
         [strongSelf sbShowHighlightBannerIfNeeded:segments];
     }];
 }
@@ -210,18 +192,15 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
         if (action == SBSegmentActionDisable ||
             action == SBSegmentActionDisplay ||
             action == SBSegmentActionSkipTo)  continue;
-
-        if (segment.endTime - segment.startTime < minDuration) continue;
+        if (segment.endTime - segment.startTime < minDuration)        continue;
         if (currentTime < segment.startTime || currentTime >= segment.endTime - 0.5) continue;
-        if ([self.sbSkippedSegments containsObject:segment.UUID]) continue;
+        if ([self.sbSkippedSegments containsObject:segment.UUID])     continue;
 
         if (action == SBSegmentActionAutoSkip) [self sbPerformSkip:segment];
         else if (action == SBSegmentActionAsk) [self sbShowAskNotification:segment];
         break;
     }
 }
-
-// ─── Skip actions ─────────────────────────────────────────────────────────────
 
 %new
 - (void)sbPerformSkip:(SBSegment *)segment {
@@ -232,13 +211,12 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     if (!IS_ENABLED(SBShowNotifications)) return;
 
     float alertDuration = FLOAT_FOR_KEY(SBUnskipAlertDuration);
-    if (alertDuration <= 0) alertDuration = 3.0;
+    if (alertDuration <= 0) alertDuration = 4.0;
 
     NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped",
                          SBLocalizedCategoryName(segment.category)];
+    float endTime = segment.endTime, startTime = segment.startTime;
 
-    // Delay so the seek completes before the banner appears,
-    // preventing the time-change callback from dismissing it immediately.
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
@@ -248,7 +226,7 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
             showInView:strongSelf.playerView
                message:message
            buttonTitle:@"Unskip"
-                action:^{ __strong typeof(weakSelf) ss = weakSelf; if (ss) [ss seekToTime:(CGFloat)segment.startTime]; }
+                action:^{ __strong typeof(weakSelf) ss = weakSelf; if (ss) [ss seekToTime:(CGFloat)startTime]; }
               duration:alertDuration];
     });
 }
@@ -258,17 +236,18 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     [self.sbSkippedSegments addObject:segment.UUID];
 
     float alertDuration = FLOAT_FOR_KEY(SBSkipAlertDuration);
-    if (alertDuration <= 0) alertDuration = 5.0;
+    if (alertDuration <= 0) alertDuration = 4.0;
 
-    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip the segment?",
+    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip?",
                          SBLocalizedCategoryName(segment.category)];
+    float endTime = segment.endTime;
 
     __weak typeof(self) weakSelf = self;
     self.sbNotificationView = [SBSkipNotificationView
         showInView:self.playerView
            message:message
        buttonTitle:@"Skip"
-            action:^{ __strong typeof(weakSelf) ss = weakSelf; if (ss) [ss seekToTime:(CGFloat)segment.endTime]; }
+            action:^{ __strong typeof(weakSelf) ss = weakSelf; if (ss) [ss seekToTime:(CGFloat)endTime]; }
           duration:alertDuration];
 }
 
@@ -277,11 +256,12 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     for (SBSegment *seg in segments) {
         if ([seg.category isEqualToString:@"poi_highlight"] &&
             [seg configuredAction] == SBSegmentActionSkipTo) {
+            __weak typeof(self) weakSelf = self;
             self.sbNotificationView = [SBSkipNotificationView
                 showInView:self.playerView
                    message:@"Highlight available. Jump to the point?"
                buttonTitle:@"Skip"
-                    action:^{ [self sbSkipToHighlight]; }
+                    action:^{ __strong typeof(weakSelf) ss = weakSelf; if (ss) [ss sbSkipToHighlight]; }
                   duration:8.0];
             break;
         }
@@ -293,14 +273,13 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     for (SBSegment *segment in self.sbSegments) {
         if ([segment.category isEqualToString:@"poi_highlight"]) {
             [self seekToTime:(CGFloat)segment.startTime];
-            if (IS_ENABLED(SBShowNotifications)) {
+            if (IS_ENABLED(SBShowNotifications))
                 self.sbNotificationView = [SBSkipNotificationView
                     showInView:self.playerView
                        message:@"Jumped to highlight"
                    buttonTitle:nil
                         action:nil
                       duration:2.0];
-            }
             break;
         }
     }

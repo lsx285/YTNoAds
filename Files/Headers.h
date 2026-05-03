@@ -1,5 +1,4 @@
 // Headers.h — YTNoAds
-// YouTube internals
 #import <YouTubeHeader/_ASDisplayView.h>
 #import <YouTubeHeader/YTIIcon.h>
 #import <YouTubeHeader/YTRightNavigationButtons.h>
@@ -34,7 +33,6 @@
 #import <MediaPlayer/MediaPlayer.h>
 #import <dlfcn.h>
 
-// For Settings.x and SponsorBlockSettings.x
 #import <YouTubeHeader/YTDefaultSheetController.h>
 
 @interface YTDefaultSheetController (YTNoAds)
@@ -42,6 +40,7 @@
 - (void)addAction:(YTActionSheetAction *)action;
 - (void)presentFromViewController:(UIViewController *)vc animated:(BOOL)animated completion:(void (^)(void))completion;
 @end
+
 #import <YouTubeHeader/YTSettingsGroupData.h>
 #import <YouTubeHeader/YTSettingsPickerViewController.h>
 #import <YouTubeHeader/YTSettingsSectionItem.h>
@@ -51,9 +50,9 @@
 #import <YouTubeHeader/YTToastResponderEvent.h>
 #import <YouTubeHeader/YTUIUtils.h>
 
-// Convenience macros
-#define IS_ENABLED(k) [[NSUserDefaults standardUserDefaults] boolForKey:k]
-#define INTFORVAL(v) [[NSUserDefaults standardUserDefaults] integerForKey:v]
+// NSUserDefaults helpers
+#define IS_ENABLED(k)    [[NSUserDefaults standardUserDefaults] boolForKey:k]
+#define INTFORVAL(v)     [[NSUserDefaults standardUserDefaults] integerForKey:v]
 #define FLOAT_FOR_KEY(k) [[NSUserDefaults standardUserDefaults] floatForKey:k]
 
 // SponsorBlock preference keys
@@ -71,7 +70,12 @@
 #define SB_ACTION_KEY(cat) [NSString stringWithFormat:@"YouModSBAction_%@", cat]
 #define SB_COLOR_KEY(cat)  [NSString stringWithFormat:@"YouModSBColor_%@", cat]
 
-// ─── Misc YouTube interfaces ──────────────────────────────────────────────────
+// Shared constants
+#define SBSegmentsDidLoadNotification @"SBSegmentsDidLoad"
+#define SBMarkerTag  9900
+#define SBToggleTag  9901
+
+// ─── YouTube interfaces ───────────────────────────────────────────────────────
 
 @interface YTITopbarLogoRenderer : NSObject
 @property(readonly, nonatomic) YTIIcon *iconImage;

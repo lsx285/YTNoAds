@@ -1,12 +1,8 @@
-// SponsorBlockSettings.x — YTNoAds
-// Full SponsorBlock settings UI surfaced as a native YouTube settings push.
 #import "Headers.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
 
 extern UIColor *SBColorFromHex(NSString *hexString);
-
-// ─── String helpers ───────────────────────────────────────────────────────────
 
 static NSString *SBCategoryName(NSString *category) {
     static NSDictionary *names;
@@ -40,7 +36,7 @@ static NSString *SBActionLabel(NSInteger action) {
 static NSString *SBHexFromColor(UIColor *color) {
     CGFloat r, g, b, a;
     [color getRed:&r green:&g blue:&b alpha:&a];
-    return [NSString stringWithFormat:@"#%02X%02X%02X", (int)(r*255), (int)(g*255), (int)(b*255)];
+    return [NSString stringWithFormat:@"#%02X%02X%02X", (int)(r * 255), (int)(g * 255), (int)(b * 255)];
 }
 
 static NSArray<NSString *> *SBCategories() {
@@ -48,8 +44,6 @@ static NSArray<NSString *> *SBCategories() {
              @"selfpromo", @"music_offtopic", @"preview", @"poi_highlight", @"filler"];
 }
 
-// Calls the nearest YTStyledViewController (or UIViewController) super implementation.
-// Necessary because SBSettingsViewController's class pair is remapped at runtime.
 #define SB_SUPER_VOID(sel) \
     do { \
         Class _base = objc_getClass("YTStyledViewController") ?: [UIViewController class]; \
@@ -63,8 +57,6 @@ static NSArray<NSString *> *SBCategories() {
         struct objc_super _sup = { self, _base }; \
         ((void (*)(struct objc_super *, SEL, BOOL))objc_msgSendSuper)(&_sup, @selector(sel), val); \
     } while (0)
-
-// ─── Rainbow + filled-center color circle ─────────────────────────────────────
 
 @interface SBColorCircleView : UIView
 @property (nonatomic, strong) UIColor *fillColor;
@@ -108,8 +100,6 @@ static NSArray<NSString *> *SBCategories() {
 
 @end
 
-// ─── SBSettingsViewController ─────────────────────────────────────────────────
-
 @interface SBSettingsViewController : UIViewController
     <UITableViewDelegate, UITableViewDataSource, UIColorPickerViewControllerDelegate>
 @end
@@ -122,15 +112,18 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 
 - (UITableView *)sbTableView { return objc_getAssociatedObject(self, kSBTableKey); }
 - (void)setSbTableView:(UITableView *)tv {
-    objc_setAssociatedObject(self, kSBTableKey, tv, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+    objc_setAssociatedObject(self, kSBTableKey, tv, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
 
 - (NSString *)activeColorKey { return objc_getAssociatedObject(self, kSBColorKey_k); }
 - (void)setActiveColorKey:(NSString *)k {
-    objc_setAssociatedObject(self, kSBColorKey_k, k, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+    objc_setAssociatedObject(self, kSBColorKey_k, k, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
 
 - (NSIndexPath *)activeColorIndexPath { return objc_getAssociatedObject(self, kSBColorIdxKey); }
 - (void)setActiveColorIndexPath:(NSIndexPath *)ip {
-    objc_setAssociatedObject(self, kSBColorIdxKey, ip, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+    objc_setAssociatedObject(self, kSBColorIdxKey, ip, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
 
 - (UIColor *)sbTextColor {
     return (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark)
@@ -157,8 +150,6 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 }
 
 - (void)viewWillAppear:(BOOL)animated { SB_SUPER_BOOL(viewWillAppear:, animated); }
-
-#pragma mark - Table structure: 0 = toggles, 1 = sliders, 2 = categories
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
@@ -205,9 +196,6 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     return [self segmentCellForRow:indexPath.row tableView:tv];
 }
 
-#pragma mark - Toggle cells (section 0)
-
-// Data-driven toggle definitions — no switch needed.
 static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     static NSArray *defs;
     static dispatch_once_t once;
@@ -253,16 +241,14 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     if (def) [[NSUserDefaults standardUserDefaults] setBool:sender.on forKey:def[@"key"]];
 }
 
-#pragma mark - Slider cells (section 1)
-
 - (UITableViewCell *)sliderCellForRow:(NSInteger)row tableView:(UITableView *)tv {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle  = UITableViewCellSelectionStyleNone;
 
-    NSString *title = (row == 0) ? @"Skip alert duration"   : @"Unskip alert duration";
-    NSString *key   = (row == 0) ? SBSkipAlertDuration       : SBUnskipAlertDuration;
-    float cur       = [[NSUserDefaults standardUserDefaults] floatForKey:key];
+    NSString *title = (row == 0) ? @"Skip alert duration" : @"Unskip alert duration";
+    NSString *key   = (row == 0) ? SBSkipAlertDuration    : SBUnskipAlertDuration;
+    float cur = [[NSUserDefaults standardUserDefaults] floatForKey:key];
     if (cur <= 0) cur = 4.0;
 
     UILabel *titleLabel = [[UILabel alloc] init];
@@ -294,13 +280,13 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     [cell.contentView addSubview:valueLabel];
 
     [NSLayoutConstraint activateConstraints:@[
-        [titleLabel.topAnchor     constraintEqualToAnchor:cell.contentView.topAnchor constant:8],
+        [titleLabel.topAnchor     constraintEqualToAnchor:cell.contentView.topAnchor     constant:8],
         [titleLabel.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],
 
-        [slider.topAnchor      constraintEqualToAnchor:titleLabel.bottomAnchor constant:8],
-        [slider.leadingAnchor  constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],
-        [slider.trailingAnchor constraintEqualToAnchor:valueLabel.leadingAnchor constant:-8],
-        [slider.bottomAnchor   constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-8],
+        [slider.topAnchor      constraintEqualToAnchor:titleLabel.bottomAnchor          constant:8],
+        [slider.leadingAnchor  constraintEqualToAnchor:cell.contentView.leadingAnchor   constant:16],
+        [slider.trailingAnchor constraintEqualToAnchor:valueLabel.leadingAnchor         constant:-8],
+        [slider.bottomAnchor   constraintEqualToAnchor:cell.contentView.bottomAnchor    constant:-8],
 
         [valueLabel.centerYAnchor  constraintEqualToAnchor:slider.centerYAnchor],
         [valueLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],
@@ -318,8 +304,6 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     vl.text = [NSString stringWithFormat:@"%d secs", rounded];
 }
 
-#pragma mark - Category cells (section 2)
-
 - (UITableViewCell *)segmentCellForRow:(NSInteger)row tableView:(UITableView *)tv {
     NSString *cat     = SBCategories()[row / 2];
     NSString *catName = SBCategoryName(cat);
@@ -329,8 +313,8 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 
 - (UITableViewCell *)actionCellForCategory:(NSString *)category name:(NSString *)catName tableView:(UITableView *)tv {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.backgroundColor = [UIColor clearColor];
-    cell.selectionStyle  = UITableViewCellSelectionStyleNone;
+    cell.backgroundColor     = [UIColor clearColor];
+    cell.selectionStyle      = UITableViewCellSelectionStyleNone;
     cell.textLabel.text      = catName;
     cell.textLabel.textColor = [self sbTextColor];
     cell.textLabel.font      = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
@@ -358,14 +342,13 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 
     UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:14];
     NSMutableArray *menuActions = [NSMutableArray arrayWithCapacity:actionDefs.count];
-
     for (NSArray *def in actionDefs) {
-        NSInteger  val      = [def[0] integerValue];
-        BOOL       isCurrent = (val == currentAction);
-        UIAction  *act = [UIAction actionWithTitle:def[1]
-                                             image:isCurrent ? [UIImage systemImageNamed:@"checkmark" withConfiguration:cfg] : nil
-                                        identifier:nil
-                                           handler:^(__kindof UIAction *a) {
+        NSInteger val = [def[0] integerValue];
+        BOOL isCurrent = (val == currentAction);
+        UIAction *act = [UIAction actionWithTitle:def[1]
+                                            image:isCurrent ? [UIImage systemImageNamed:@"checkmark" withConfiguration:cfg] : nil
+                                       identifier:nil
+                                          handler:^(__kindof UIAction *a) {
             [[NSUserDefaults standardUserDefaults] setInteger:val forKey:actionKey];
             [[self sbTableView] reloadData];
         }];
@@ -382,8 +365,8 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 
 - (UITableViewCell *)colorCellForCategory:(NSString *)category name:(NSString *)catName tableView:(UITableView *)tv {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.backgroundColor = [UIColor clearColor];
-    cell.selectionStyle  = UITableViewCellSelectionStyleNone;
+    cell.backgroundColor     = [UIColor clearColor];
+    cell.selectionStyle      = UITableViewCellSelectionStyleNone;
     cell.textLabel.text      = [NSString stringWithFormat:@"%@ color", catName];
     cell.textLabel.textColor = [self sbTextColor];
     cell.textLabel.font      = [UIFont systemFontOfSize:15];
@@ -399,7 +382,6 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 
     NSString *cat      = SBCategories()[indexPath.row / 2];
     NSString *colorKey = SB_COLOR_KEY(cat);
-
     [self setActiveColorKey:colorKey];
     [self setActiveColorIndexPath:indexPath];
 
@@ -412,8 +394,6 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     [self presentViewController:picker animated:YES completion:nil];
 }
 
-#pragma mark - UIColorPickerViewControllerDelegate
-
 - (void)colorPickerViewControllerDidFinish:(UIColorPickerViewController *)vc {
     [[NSUserDefaults standardUserDefaults] setObject:SBHexFromColor(vc.selectedColor) forKey:[self activeColorKey]];
     [[self sbTableView] reloadRowsAtIndexPaths:@[[self activeColorIndexPath]]
@@ -422,14 +402,11 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 
 - (void)colorPickerViewController:(UIColorPickerViewController *)vc
                    didSelectColor:(UIColor *)color continuously:(BOOL)continuously {
-    if (!continuously) {
-        [[NSUserDefaults standardUserDefaults] setObject:SBHexFromColor(color) forKey:[self activeColorKey]];
-        [[self sbTableView] reloadRowsAtIndexPaths:@[[self activeColorIndexPath]]
-                                  withRowAnimation:UITableViewRowAnimationNone];
-    }
+    if (continuously) return;
+    [[NSUserDefaults standardUserDefaults] setObject:SBHexFromColor(color) forKey:[self activeColorKey]];
+    [[self sbTableView] reloadRowsAtIndexPaths:@[[self activeColorIndexPath]]
+                              withRowAnimation:UITableViewRowAnimationNone];
 }
-
-#pragma mark - Footer
 
 - (CGFloat)tableView:(UITableView *)tv heightForFooterInSection:(NSInteger)section {
     return (section == 2) ? 0 : 16;
@@ -440,22 +417,17 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 
 @end
 
-// ─── Runtime subclass + defaults ─────────────────────────────────────────────
-
 %ctor {
-    // Register SBSettingsViewControllerStyled as a YTStyledViewController subclass
-    // so YouTube applies its own nav-bar theming to our settings screen.
     Class ytStyled = %c(YTStyledViewController);
     if (ytStyled) {
         Class sbStyled = objc_allocateClassPair(ytStyled, "SBSettingsViewControllerStyled", 0);
         if (sbStyled) {
             unsigned int count = 0;
             Method *methods = class_copyMethodList([SBSettingsViewController class], &count);
-            for (unsigned int i = 0; i < count; i++) {
+            for (unsigned int i = 0; i < count; i++)
                 class_addMethod(sbStyled, method_getName(methods[i]),
                                 method_getImplementation(methods[i]),
                                 method_getTypeEncoding(methods[i]));
-            }
             free(methods);
 
             unsigned int propCount = 0;
@@ -481,6 +453,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
         SBShowDuration:         @NO,
         SBSkipAlertDuration:    @4.0,
         SBUnskipAlertDuration:  @4.0,
+        SBMinDuration:          @0.0,
         SB_ACTION_KEY(@"sponsor"):        @(SBSegmentActionAutoSkip),
         SB_ACTION_KEY(@"intro"):          @(SBSegmentActionAutoSkip),
         SB_ACTION_KEY(@"outro"):          @(SBSegmentActionAutoSkip),

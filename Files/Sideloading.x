@@ -1,15 +1,12 @@
-// Adapted from YTLite and uYouEnhanced
 #import "Headers.h"
 
 #define YT_BUNDLE_ID @"com.google.ios.youtube"
-#define YT_NAME @"YouTube"
+#define YT_NAME      @"YouTube"
 
-// Cached keychain access group lookup — resolves once and reuses the result.
-// Without this, YouTube can't find its saved login tokens on relaunch after sideloading.
 static NSString *accessGroupID() {
-    static NSString *cachedID = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static NSString *cachedID;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
         NSDictionary *query = @{
             (__bridge NSString *)kSecClass:            (__bridge NSString *)kSecClassGenericPassword,
             (__bridge NSString *)kSecAttrAccount:      @"bundleSeedID",
@@ -27,12 +24,9 @@ static NSString *accessGroupID() {
     return cachedID;
 }
 
-// IAmYouTube - makes the app identify itself as the real YouTube
-// so Google Sign-In and other services accept it.
-// https://github.com/PoomSmart/IAmYouTube
 %hook YTVersionUtils
 + (NSString *)appName { return YT_NAME; }
-+ (NSString *)appID { return YT_BUNDLE_ID; }
++ (NSString *)appID   { return YT_BUNDLE_ID; }
 %end
 
 %hook GCKBUtils
@@ -70,7 +64,7 @@ static NSString *accessGroupID() {
 %hook SSOConfiguration
 - (id)initWithClientID:(id)clientID supportedAccountServices:(id)supportedAccountServices {
     self = %orig;
-    [(NSObject *)self setValue:YT_NAME forKey:@"_shortAppName"];
+    [(NSObject *)self setValue:YT_NAME    forKey:@"_shortAppName"];
     [(NSObject *)self setValue:YT_BUNDLE_ID forKey:@"_applicationIdentifier"];
     return self;
 }
@@ -82,34 +76,30 @@ static NSString *accessGroupID() {
 
 %hook NSBundle
 + (NSBundle *)bundleWithIdentifier:(NSString *)identifier {
-    if ([identifier isEqualToString:YT_BUNDLE_ID])
-        return NSBundle.mainBundle;
+    if ([identifier isEqualToString:YT_BUNDLE_ID]) return NSBundle.mainBundle;
     return %orig(identifier);
 }
 - (NSString *)bundleIdentifier {
     return [self isEqual:NSBundle.mainBundle] ? YT_BUNDLE_ID : %orig;
 }
 - (NSDictionary *)infoDictionary {
-    // Early-exit before calling %orig a second time for non-main bundles.
     if (![self isEqual:NSBundle.mainBundle]) return %orig;
     NSMutableDictionary *info = [%orig mutableCopy];
-    if (info[@"CFBundleIdentifier"])  info[@"CFBundleIdentifier"]  = YT_BUNDLE_ID;
-    if (info[@"CFBundleDisplayName"]) info[@"CFBundleDisplayName"] = YT_NAME;
-    if (info[@"CFBundleName"])        info[@"CFBundleName"]        = YT_NAME;
+    info[@"CFBundleIdentifier"]  = YT_BUNDLE_ID;
+    info[@"CFBundleDisplayName"] = YT_NAME;
+    info[@"CFBundleName"]        = YT_NAME;
     return info;
 }
 - (id)objectForInfoDictionaryKey:(NSString *)key {
     if (![self isEqual:NSBundle.mainBundle]) return %orig;
-    if ([key isEqualToString:@"CFBundleIdentifier"]) return YT_BUNDLE_ID;
+    if ([key isEqualToString:@"CFBundleIdentifier"])                                    return YT_BUNDLE_ID;
     if ([key isEqualToString:@"CFBundleDisplayName"] || [key isEqualToString:@"CFBundleName"]) return YT_NAME;
     return %orig;
 }
 %end
 
-// Keychain access group fixes — routes all keychain operations through
-// the correct sideloaded access group so login state persists across launches.
 %hook SSOKeychainHelper
-+ (id)accessGroup { return accessGroupID(); }
++ (id)accessGroup       { return accessGroupID(); }
 + (id)sharedAccessGroup { return accessGroupID(); }
 %end
 
@@ -118,50 +108,42 @@ static NSString *accessGroupID() {
 %end
 
 %hook GULKeychainStorage
-- (void)getObjectForKey:(id)key objectClass:(Class)objectClass accessGroup:(id)accessGroup completionHandler:(id)handler {
-    %orig(key, objectClass, accessGroupID(), handler);
+- (void)getObjectForKey:(id)key objectClass:(Class)cls accessGroup:(id)ag completionHandler:(id)handler {
+    %orig(key, cls, accessGroupID(), handler);
 }
-- (void)setObject:(id)object forKey:(id)key accessGroup:(id)accessGroup completionHandler:(id)handler {
-    %orig(object, key, accessGroupID(), handler);
+- (void)setObject:(id)obj forKey:(id)key accessGroup:(id)ag completionHandler:(id)handler {
+    %orig(obj, key, accessGroupID(), handler);
 }
-- (void)removeObjectForKey:(id)key accessGroup:(id)accessGroup completionHandler:(id)handler {
+- (void)removeObjectForKey:(id)key accessGroup:(id)ag completionHandler:(id)handler {
     %orig(key, accessGroupID(), handler);
 }
-- (void)getObjectFromKeychainForKey:(id)key objectClass:(Class)objectClass accessGroup:(id)accessGroup completionHandler:(id)handler {
-    %orig(key, objectClass, accessGroupID(), handler);
+- (void)getObjectFromKeychainForKey:(id)key objectClass:(Class)cls accessGroup:(id)ag completionHandler:(id)handler {
+    %orig(key, cls, accessGroupID(), handler);
 }
-- (id)keychainQueryWithKey:(id)key accessGroup:(id)accessGroup {
+- (id)keychainQueryWithKey:(id)key accessGroup:(id)ag {
     return %orig(key, accessGroupID());
 }
 %end
 
 %hook GNPEncryptionConfiguration
-- (id)initWithKeychainAccessGroup:(id)arg {
-    return %orig(accessGroupID());
-}
-- (id)keychainAccessGroup { return accessGroupID(); }
+- (id)initWithKeychainAccessGroup:(id)arg { return %orig(accessGroupID()); }
+- (id)keychainAccessGroup                 { return accessGroupID(); }
 %end
 
 %hook FIRInstallationsStore
-- (id)initWithSecureStorage:(id)arg1 accessGroup:(id)arg2 {
-    return %orig(arg1, accessGroupID());
-}
+- (id)initWithSecureStorage:(id)arg1 accessGroup:(id)arg2 { return %orig(arg1, accessGroupID()); }
 - (id)accessGroup { return accessGroupID(); }
 %end
 
 %hook CHMConfiguration
-- (void)setKeychainAccessGroup:(id)arg {
-    %orig(accessGroupID());
-}
-- (id)keychainAccessGroup { return accessGroupID(); }
+- (void)setKeychainAccessGroup:(id)arg { %orig(accessGroupID()); }
+- (id)keychainAccessGroup              { return accessGroupID(); }
 %end
 
-// Redirects app group container lookups to Documents/AppGroup since
-// sideloaded apps don't have real entitlement-backed app groups.
 %hook NSFileManager
 - (NSURL *)containerURLForSecurityApplicationGroupIdentifier:(NSString *)groupIdentifier {
     if (!groupIdentifier) return %orig(groupIdentifier);
-    NSURL *documentsURL = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
-    return [documentsURL URLByAppendingPathComponent:@"AppGroup"];
+    NSURL *docs = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
+    return [docs URLByAppendingPathComponent:@"AppGroup"];
 }
 %end

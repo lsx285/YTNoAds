@@ -1,8 +1,6 @@
 #import "Headers.h"
 #import <objc/message.h>
 
-#pragma mark - SBSkipNotificationView
-
 @implementation SBSkipNotificationView
 
 + (instancetype)showInView:(UIView *)parentView message:(NSString *)message
@@ -10,25 +8,21 @@
                   duration:(NSTimeInterval)duration {
     if (!parentView) return nil;
 
-    // Dismiss any existing notification banner
-    for (UIView *sub in [parentView.subviews copy]) {
+    for (UIView *sub in [parentView.subviews copy])
         if ([sub isKindOfClass:[SBSkipNotificationView class]])
             [(SBSkipNotificationView *)sub dismiss];
-    }
 
     SBSkipNotificationView *view = [[SBSkipNotificationView alloc] initWithFrame:CGRectZero];
     view.translatesAutoresizingMaskIntoConstraints = NO;
-    view.backgroundColor  = [UIColor colorWithWhite:0.0 alpha:0.85];
-    view.layer.cornerRadius = 12.0;
-    view.clipsToBounds    = NO;
-    view.onAction         = action;
-
+    view.backgroundColor     = [UIColor colorWithWhite:0.0 alpha:0.85];
+    view.layer.cornerRadius  = 12.0;
     view.layer.shadowColor   = [UIColor blackColor].CGColor;
     view.layer.shadowOffset  = CGSizeMake(0, 2);
     view.layer.shadowRadius  = 8.0;
     view.layer.shadowOpacity = 0.4;
+    view.clipsToBounds       = NO;
+    view.onAction            = action;
 
-    // Message label
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.translatesAutoresizingMaskIntoConstraints = NO;
     label.text          = message;
@@ -39,7 +33,6 @@
     view.messageLabel   = label;
     [view addSubview:label];
 
-    // Icon button (right side) — icon determined by button title context
     NSString *iconName = ([buttonTitle.lowercaseString containsString:@"unskip"] ||
                           [buttonTitle.lowercaseString containsString:@"back"])
                          ? @"backward.end.fill" : @"forward.end.fill";
@@ -47,29 +40,28 @@
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     button.translatesAutoresizingMaskIntoConstraints = NO;
     [button setImage:[UIImage systemImageNamed:iconName
-                               withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:16
-                                                                                                weight:UIImageSymbolWeightMedium]]
+                             withConfiguration:[UIImageSymbolConfiguration
+                                 configurationWithPointSize:16 weight:UIImageSymbolWeightMedium]]
             forState:UIControlStateNormal];
-    button.tintColor        = [UIColor whiteColor];
-    button.backgroundColor  = [UIColor colorWithWhite:1.0 alpha:0.15];
+    button.tintColor          = [UIColor whiteColor];
+    button.backgroundColor    = [UIColor colorWithWhite:1.0 alpha:0.15];
     button.layer.cornerRadius = 18.0;
-    button.clipsToBounds    = YES;
+    button.clipsToBounds      = YES;
     [button addTarget:view action:@selector(actionButtonTapped) forControlEvents:UIControlEventTouchUpInside];
     view.actionButton = button;
     [view addSubview:button];
 
     [parentView addSubview:view];
 
-    // Layout — full width with padding, bottom-anchored
     [NSLayoutConstraint activateConstraints:@[
         [view.leadingAnchor  constraintEqualToAnchor:parentView.leadingAnchor  constant:16.0],
         [view.trailingAnchor constraintEqualToAnchor:parentView.trailingAnchor constant:-16.0],
         [view.bottomAnchor   constraintEqualToAnchor:parentView.bottomAnchor   constant:-80.0],
 
-        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor  constant:16.0],
-        [label.topAnchor      constraintEqualToAnchor:view.topAnchor      constant:12.0],
-        [label.bottomAnchor   constraintEqualToAnchor:view.bottomAnchor   constant:-12.0],
-        [label.trailingAnchor constraintEqualToAnchor:button.leadingAnchor constant:-12.0],
+        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:16.0],
+        [label.topAnchor      constraintEqualToAnchor:view.topAnchor        constant:12.0],
+        [label.bottomAnchor   constraintEqualToAnchor:view.bottomAnchor     constant:-12.0],
+        [label.trailingAnchor constraintEqualToAnchor:button.leadingAnchor  constant:-12.0],
 
         [button.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:-12.0],
         [button.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor],
@@ -77,12 +69,10 @@
         [button.heightAnchor   constraintEqualToConstant:36.0],
     ]];
 
-    // Swipe-down to dismiss
     UISwipeGestureRecognizer *swipe = [[UISwipeGestureRecognizer alloc] initWithTarget:view action:@selector(dismiss)];
     swipe.direction = UISwipeGestureRecognizerDirectionDown;
     [view addGestureRecognizer:swipe];
 
-    // Fade in
     view.alpha     = 0.0;
     view.transform = CGAffineTransformMakeTranslation(0, 10);
     [UIView animateWithDuration:0.25 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
@@ -90,10 +80,9 @@
         view.transform = CGAffineTransformIdentity;
     } completion:nil];
 
-    if (duration > 0) {
+    if (duration > 0)
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{ [view dismiss]; });
-    }
     return view;
 }
 
@@ -111,9 +100,6 @@
 
 @end
 
-#pragma mark - Shared player-bar lookup
-
-// Returns the actual seek-bar view from a container, with fallback.
 static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *container) {
     if ([container respondsToSelector:@selector(modularPlayerBar)]) {
         id modular = container.modularPlayerBar;
@@ -121,81 +107,8 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
     }
     if ([container respondsToSelector:@selector(segmentablePlayerBar)])
         return (UIView *)container.segmentablePlayerBar;
-    return container; // fallback
+    return container;
 }
-
-#pragma mark - YTSegmentableInlinePlayerBarView (Seek Bar Markers)
-
-%hook YTSegmentableInlinePlayerBarView
-%property (nonatomic, strong) NSArray *sbMarkerViews;
-
-- (void)layoutSubviews {
-    %orig;
-    if (self.sbMarkerViews.count) [self performSelector:@selector(sbRepositionMarkers)];
-}
-
-%new
-- (void)sbRenderSegments:(NSArray<SBSegment *> *)segments {
-    [self sbClearSegments];
-
-    CGFloat totalTime = 0;
-    @try { totalTime = [[self valueForKey:@"totalTime"] floatValue]; }
-    @catch (NSException *e) { return; }
-    if (totalTime <= 0 || !segments.count) return;
-
-    CGFloat barWidth  = self.bounds.size.width;
-    CGFloat barHeight = self.bounds.size.height;
-    if (barWidth <= 0) return;
-
-    NSMutableArray *markers = [NSMutableArray arrayWithCapacity:segments.count];
-    for (SBSegment *segment in segments) {
-        if ([segment configuredAction] == SBSegmentActionDisable) continue;
-
-        CGFloat startFrac = segment.startTime / totalTime;
-        CGFloat endFrac   = segment.endTime   / totalTime;
-        CGFloat x = startFrac * barWidth;
-        CGFloat w = MAX(2.0, (endFrac - startFrac) * barWidth);
-
-        UIView *marker = [[UIView alloc] initWithFrame:CGRectMake(x, barHeight - 4.0, w, 4.0)];
-        marker.backgroundColor     = [segment segmentColor];
-        marker.userInteractionEnabled = NO;
-        // Encode start/end in layer name for repositioning
-        marker.layer.name = [NSString stringWithFormat:@"%f|%f", segment.startTime, segment.endTime];
-        [self addSubview:marker];
-        [markers addObject:marker];
-    }
-    self.sbMarkerViews = [markers copy];
-}
-
-%new
-- (void)sbRepositionMarkers {
-    CGFloat totalTime = 0;
-    @try { totalTime = [[self valueForKey:@"totalTime"] floatValue]; }
-    @catch (NSException *e) { return; }
-    if (totalTime <= 0) return;
-
-    CGFloat barWidth  = self.bounds.size.width;
-    CGFloat barHeight = self.bounds.size.height;
-    if (barWidth <= 0) return;
-
-    for (UIView *marker in self.sbMarkerViews) {
-        NSArray *parts = [marker.layer.name componentsSeparatedByString:@"|"];
-        if (parts.count < 2) continue;
-        CGFloat x = [parts[0] floatValue] / totalTime * barWidth;
-        CGFloat w = MAX(2.0, ([parts[1] floatValue] - [parts[0] floatValue]) / totalTime * barWidth);
-        marker.frame = CGRectMake(x, barHeight - 4.0, w, 4.0);
-    }
-}
-
-%new
-- (void)sbClearSegments {
-    for (UIView *marker in self.sbMarkerViews) [marker removeFromSuperview];
-    self.sbMarkerViews = nil;
-}
-
-%end
-
-#pragma mark - YTInlinePlayerBarContainerView (Marker Repositioning on Layout)
 
 %hook YTInlinePlayerBarContainerView
 
@@ -208,7 +121,6 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
     CGFloat barWidth = playerBar.bounds.size.width;
     if (barWidth <= 0) return;
 
-    // Find reference view for Y/height alignment
     UIView *referenceView = nil;
     for (UIView *sub in playerBar.subviews) {
         if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)] ||
@@ -222,7 +134,7 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
     CGFloat markerHeight = MAX(2.0, referenceView ? referenceView.frame.size.height : 3.0);
 
     for (UIView *sub in playerBar.subviews) {
-        if (sub.tag != 9900) continue;
+        if (sub.tag != SBMarkerTag) continue;
         NSArray *data = objc_getAssociatedObject(sub, @selector(sbSegmentData));
         if (data.count < 3) continue;
 
@@ -241,24 +153,20 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
 
 %end
 
-// YTModularPlayerBarView hook removed — class may not exist in YT 21.17.3
-
-#pragma mark - YTPlayerViewController (Segment Notification Observer)
-
 %group SBObserver
 %hook YTPlayerViewController
 
 - (void)viewDidLoad {
     %orig;
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"SBSegmentsDidLoad" object:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:SBSegmentsDidLoadNotification object:self];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(sbSegmentsDidLoad:)
-                                                 name:@"SBSegmentsDidLoad"
+                                                 name:SBSegmentsDidLoadNotification
                                                object:self];
 }
 
 - (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"SBSegmentsDidLoad" object:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:SBSegmentsDidLoadNotification object:self];
     %orig;
 }
 
@@ -271,17 +179,13 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
         if (!overlay || ![overlay respondsToSelector:@selector(playerBarController)]) return;
 
         YTPlayerBarController *barController = [overlay playerBarController];
-        if (!barController) return;
-
         YTInlinePlayerBarContainerView *containerView = barController.playerBar;
         if (!containerView) return;
 
         UIView *playerBar = sbPlayerBarFromContainer(containerView);
 
-        // Remove old markers
-        for (UIView *sub in [playerBar.subviews copy]) {
-            if (sub.tag == 9900) [sub removeFromSuperview];
-        }
+        for (UIView *sub in [playerBar.subviews copy])
+            if (sub.tag == SBMarkerTag) [sub removeFromSuperview];
 
         if (!segments.count) return;
 
@@ -289,16 +193,14 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
         CGFloat barWidth  = playerBar.bounds.size.width;
         if (totalTime <= 0 || barWidth <= 0) return;
 
-        // Find reference view for Y/height, and scrubber dot for z-order
         UIView *referenceView = nil, *scrubberView = nil;
         for (UIView *sub in playerBar.subviews) {
-            if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)]) {
+            if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)])
                 referenceView = sub;
-            } else if (!referenceView && [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) {
+            else if (!referenceView && [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)])
                 referenceView = sub;
-            } else if ([sub isKindOfClass:%c(YTPlayerBarScrubberDotDecorationView)]) {
+            else if ([sub isKindOfClass:%c(YTPlayerBarScrubberDotDecorationView)])
                 scrubberView = sub;
-            }
         }
 
         CGFloat markerY      = referenceView ? referenceView.frame.origin.y : (playerBar.bounds.size.height - 3.0);
@@ -319,7 +221,7 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
             UIView *marker = [[UIView alloc] initWithFrame:CGRectMake(x, markerY, w, markerHeight)];
             marker.backgroundColor        = [segment segmentColor];
             marker.userInteractionEnabled = NO;
-            marker.tag                    = 9900;
+            marker.tag                    = SBMarkerTag;
             objc_setAssociatedObject(marker, @selector(sbSegmentData),
                                      @[@(startFrac), @(endFrac), @(isPoi)],
                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -328,16 +230,12 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
             else               [playerBar addSubview:marker];
         }
 
-        // Keep scrubber dot on top
         if (scrubberView) [playerBar bringSubviewToFront:scrubberView.superview ?: scrubberView];
-
     } @catch (NSException *e) {}
 }
 
 %end
 %end
-
-#pragma mark - YTMainAppControlsOverlayView (Toggle Button)
 
 %hook YTMainAppControlsOverlayView
 
@@ -345,17 +243,17 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
     %orig;
 
     if (!IS_ENABLED(SBEnabled) || !IS_ENABLED(SBShowButton)) {
-        [[self viewWithTag:9901] removeFromSuperview];
+        [[self viewWithTag:SBToggleTag] removeFromSuperview];
         return;
     }
 
-    UIButton *btn = (UIButton *)[self viewWithTag:9901];
+    UIButton *btn = (UIButton *)[self viewWithTag:SBToggleTag];
     if (!btn) {
         btn = [UIButton buttonWithType:UIButtonTypeCustom];
-        btn.tag = 9901;
+        btn.tag = SBToggleTag;
         [btn setImage:[UIImage systemImageNamed:@"shield.fill"
-                               withConfiguration:[UIImageSymbolConfiguration
-                                   configurationWithPointSize:20 weight:UIImageSymbolWeightMedium]]
+                             withConfiguration:[UIImageSymbolConfiguration
+                                 configurationWithPointSize:20 weight:UIImageSymbolWeightMedium]]
              forState:UIControlStateNormal];
         btn.tintColor = [UIColor colorWithRed:0.4 green:0.8 blue:1.0 alpha:1.0];
         [btn addTarget:self action:@selector(sbButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
@@ -367,35 +265,29 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
 
 %new
 - (void)sbButtonTapped:(UIButton *)sender {
-    // Walk responder chain to find the player VC
     YTPlayerViewController *pvc = nil;
     if ([self respondsToSelector:@selector(playerViewController)])
         pvc = [self performSelector:@selector(playerViewController)];
 
     if (!pvc) {
         UIResponder *r = self;
-        while (r) {
+        while ((r = r.nextResponder))
             if ([r isKindOfClass:%c(YTPlayerViewController)]) { pvc = (YTPlayerViewController *)r; break; }
-            r = r.nextResponder;
-        }
     }
-    if (!pvc) { NSLog(@"[YTNoAds SponsorBlock] Unable to find YTPlayerViewController"); return; }
+    if (!pvc) return;
 
-    BOOL enabled  = !pvc.sbEnabledForVideo;
+    BOOL enabled = !pvc.sbEnabledForVideo;
     pvc.sbEnabledForVideo = enabled;
     sender.tintColor = enabled ? [UIColor colorWithRed:0.4 green:0.8 blue:1.0 alpha:1.0]
                                : [UIColor grayColor];
 
-    // Broadcast current segments (or empty array to clear markers)
     NSArray *segments = (enabled && pvc.sbSegments.count) ? pvc.sbSegments : @[];
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"SBSegmentsDidLoad"
+    [[NSNotificationCenter defaultCenter] postNotificationName:SBSegmentsDidLoadNotification
                                                         object:pvc
                                                       userInfo:@{@"segments": segments}];
 }
 
 %end
-
-#pragma mark - Constructor
 
 %ctor {
     %init;

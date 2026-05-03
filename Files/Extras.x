@@ -1,6 +1,5 @@
 #import "Headers.h"
 
-// Background Playback
 %hook MLVideo
 - (BOOL)playableInBackground { return YES; }
 %end
@@ -17,7 +16,6 @@
 - (BOOL)isPlayableInBackground { return YES; }
 %end
 
-// Hide Create Button
 %hook YTPivotBarView
 - (void)setRenderer:(YTIPivotBarRenderer *)renderer {
     NSMutableArray *items = [renderer itemsArray];
