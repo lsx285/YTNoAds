@@ -1,6 +1,13 @@
 #import "Headers.h"
 #import <AudioToolbox/AudioToolbox.h>
 
+// Forward-declare %new methods so the compiler can see them when called
+// from earlier hooks in the same %hook block.
+@interface YTPlayerViewController (SBInternal)
+- (void)sbLoadSegmentsForVideoID:(NSString *)videoID;
+- (void)sbHandleTimeChange;
+@end
+
 static NSMutableDictionary<NSString *, NSArray<SBSegment *> *> *sbSegmentCache;
 
 static NSArray<NSString *> *sbAllCategories() {
