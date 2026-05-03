@@ -39,7 +39,7 @@
     [parentView addSubview:view];
 
     BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
-    CGFloat bottomOffset = isLandscape ? -30.0 : -80.0;
+    CGFloat bottomOffset = isLandscape ? -45.0 : -80.0;
 
     [NSLayoutConstraint activateConstraints:@[
         [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
