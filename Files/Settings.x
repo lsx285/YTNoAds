@@ -41,10 +41,13 @@ static const NSInteger SBSection = 'ytsb';
         accessibilityIdentifier:nil
         detailTextBlock:nil
         selectBlock:^BOOL(YTSettingsCell *cell, NSUInteger arg1) {
-            Class sbClass = objc_getClass("SBSettingsViewControllerStyled") ?: [SBSettingsViewController class];
-            SBSettingsViewController *sbVC =
-                (SBSettingsViewController *)((id (*)(id, SEL, id))objc_msgSend)
-                    ([sbClass alloc], @selector(initWithParentResponder:), settingsVC);
+            Class sbClass = objc_getClass("SBSettingsViewControllerStyled");
+            UIViewController *sbVC;
+            if (sbClass && [sbClass instancesRespondToSelector:@selector(initWithParentResponder:)]) {
+                sbVC = ((id (*)(id, SEL, id))objc_msgSend)([sbClass alloc], @selector(initWithParentResponder:), settingsVC);
+            } else {
+                sbVC = [[SBSettingsViewController alloc] init];
+            }
             [settingsVC pushViewController:sbVC];
             return YES;
         }];

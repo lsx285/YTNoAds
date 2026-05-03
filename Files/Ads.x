@@ -269,7 +269,9 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
 %end
 
 %hook YTWatchMiniBarControlsView
-- (void)setTitle:(id)arg1 byline:(id)arg2 showingPaidPromotion:(BOOL)arg3 showingPremiumBadge:(BOOL)arg4 {}
+- (void)setTitle:(id)arg1 byline:(id)arg2 showingPaidPromotion:(BOOL)arg3 showingPremiumBadge:(BOOL)arg4 {
+    %orig(arg1, arg2, NO, NO);
+}
 %end
 
 %hook MDXFeatureFlags

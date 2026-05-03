@@ -39,11 +39,6 @@ static NSString *SBHexFromColor(UIColor *color) {
     return [NSString stringWithFormat:@"#%02X%02X%02X", (int)(r * 255), (int)(g * 255), (int)(b * 255)];
 }
 
-static NSArray<NSString *> *SBCategories() {
-    return @[@"sponsor", @"intro", @"outro", @"interaction",
-             @"selfpromo", @"music_offtopic", @"preview", @"poi_highlight", @"filler"];
-}
-
 #define SB_SUPER_VOID(sel) \
     do { \
         Class _base = objc_getClass("YTStyledViewController") ?: [UIViewController class]; \
@@ -123,16 +118,16 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     [self.view addSubview:tv];
     [self setSbTableView:tv];
 }
-- (void)viewWillAppear:(BOOL)animated { 
-    SB_SUPER_BOOL(viewWillAppear:, animated); 
+- (void)viewWillAppear:(BOOL)animated {
+    SB_SUPER_BOOL(viewWillAppear:, animated);
     [[self sbTableView] reloadData];
 }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)section {
     if (section == 0) return 6;
-    if (section == 1) return 2;
+    if (section == 1) return 3;
     if (section == 3) return 1;
-    return (NSInteger)SBCategories().count * 2;
+    return (NSInteger)SBAllCategories().count * 2;
 }
 - (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)section {
     NSString *title = (section == 0) ? @"General" : (section == 2) ? @"Categories" : (section == 3) ? @"Cache Management" : nil;
@@ -208,31 +203,47 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    NSString *title = (row == 0) ? @"Skip alert duration" : @"Unskip alert duration";
-    NSString *key = (row == 0) ? SBSkipAlertDuration : SBUnskipAlertDuration;
+
+    NSString *title, *key, *unit;
+    float minVal, maxVal, defaultVal;
+    if (row == 0) {
+        title = @"Skip alert duration"; key = SBSkipAlertDuration;
+        minVal = 2.0; maxVal = 20.0; defaultVal = 4.0; unit = @"secs";
+    } else if (row == 1) {
+        title = @"Unskip alert duration"; key = SBUnskipAlertDuration;
+        minVal = 2.0; maxVal = 20.0; defaultVal = 4.0; unit = @"secs";
+    } else {
+        title = @"Min segment duration"; key = SBMinDuration;
+        minVal = 0.0; maxVal = 30.0; defaultVal = 0.0; unit = @"secs";
+    }
+
     float cur = [[NSUserDefaults standardUserDefaults] floatForKey:key];
-    if (cur <= 0) cur = 4.0;
+    if (cur <= 0 && row < 2) cur = defaultVal;
+
     UILabel *titleLabel = [[UILabel alloc] init];
     titleLabel.text = title;
     titleLabel.textColor = [self sbSecondaryTextColor];
     titleLabel.font = [UIFont systemFontOfSize:13];
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
     UISlider *slider = [[UISlider alloc] init];
-    slider.minimumValue = 2.0;
-    slider.maximumValue = 20.0;
+    slider.minimumValue = minVal;
+    slider.maximumValue = maxVal;
     slider.value = cur;
     slider.minimumTrackTintColor = [self sbAccentColor];
     slider.maximumTrackTintColor = [UIColor colorWithWhite:0.3 alpha:1.0];
     slider.translatesAutoresizingMaskIntoConstraints = NO;
     slider.tag = row;
     [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
+
     UILabel *valueLabel = [[UILabel alloc] init];
-    valueLabel.text = [NSString stringWithFormat:@"%d secs", (int)cur];
+    valueLabel.text = [NSString stringWithFormat:@"%d %@", (int)cur, unit];
     valueLabel.textColor = [self sbSecondaryTextColor];
     valueLabel.font = [UIFont systemFontOfSize:13];
     valueLabel.textAlignment = NSTextAlignmentRight;
     valueLabel.translatesAutoresizingMaskIntoConstraints = NO;
     valueLabel.tag = 100 + row;
+
     [cell.contentView addSubview:titleLabel];
     [cell.contentView addSubview:slider];
     [cell.contentView addSubview:valueLabel];
@@ -245,12 +256,15 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
         [slider.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-8],
         [valueLabel.centerYAnchor constraintEqualToAnchor:slider.centerYAnchor],
         [valueLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],
-        [valueLabel.widthAnchor constraintEqualToConstant:50],
+        [valueLabel.widthAnchor constraintEqualToConstant:56],
     ]];
     return cell;
 }
 - (void)sliderChanged:(UISlider *)sender {
-    NSString *key = (sender.tag == 0) ? SBSkipAlertDuration : SBUnskipAlertDuration;
+    NSString *key;
+    if (sender.tag == 0) key = SBSkipAlertDuration;
+    else if (sender.tag == 1) key = SBUnskipAlertDuration;
+    else key = SBMinDuration;
     int rounded = (int)roundf(sender.value);
     sender.value = rounded;
     [[NSUserDefaults standardUserDefaults] setFloat:(float)rounded forKey:key];
@@ -270,7 +284,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     return cell;
 }
 - (UITableViewCell *)segmentCellForRow:(NSInteger)row tableView:(UITableView *)tv {
-    NSString *cat = SBCategories()[row / 2];
+    NSString *cat = SBAllCategories()[row / 2];
     NSString *catName = SBCategoryName(cat);
     return (row % 2 == 1) ? [self colorCellForCategory:cat name:catName tableView:tv] : [self actionCellForCategory:cat name:catName tableView:tv];
 }
@@ -291,7 +305,9 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     menuBtn.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     [menuBtn setImage:[UIImage systemImageNamed:@"chevron.up.chevron.down"] forState:UIControlStateNormal];
     menuBtn.tintColor = [self sbSecondaryTextColor];
-    NSArray *actionDefs = isHighlight ? @[@[@(SBSegmentActionDisable), @"Disabled"], @[@(SBSegmentActionSkipTo), @"Skip to"], @[@(SBSegmentActionDisplay), @"Show on bar"]] : @[@[@(SBSegmentActionDisable), @"Disabled"], @[@(SBSegmentActionAutoSkip), @"Auto-skip"], @[@(SBSegmentActionAsk), @"Ask to skip"], @[@(SBSegmentActionDisplay), @"Show on bar"]];
+    NSArray *actionDefs = isHighlight
+        ? @[@[@(SBSegmentActionDisable), @"Disabled"], @[@(SBSegmentActionSkipTo), @"Skip to"], @[@(SBSegmentActionDisplay), @"Show on bar"]]
+        : @[@[@(SBSegmentActionDisable), @"Disabled"], @[@(SBSegmentActionAutoSkip), @"Auto-skip"], @[@(SBSegmentActionAsk), @"Ask to skip"], @[@(SBSegmentActionDisplay), @"Show on bar"]];
     UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:14];
     NSMutableArray *menuActions = [NSMutableArray arrayWithCapacity:actionDefs.count];
     for (NSArray *def in actionDefs) {
@@ -328,7 +344,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
         return;
     }
     if (indexPath.section != 2 || indexPath.row % 2 != 1) return;
-    NSString *cat = SBCategories()[indexPath.row / 2];
+    NSString *cat = SBAllCategories()[indexPath.row / 2];
     NSString *colorKey = SB_COLOR_KEY(cat);
     [self setActiveColorKey:colorKey];
     [self setActiveColorIndexPath:indexPath];

@@ -29,8 +29,6 @@
 #import <YouTubeHeader/YTSingleVideoController.h>
 #import <YouTubeHeader/YTPlayerView.h>
 #import <YouTubeHeader/YTLabel.h>
-#import <MediaPlayer/MediaPlayer.h>
-#import <dlfcn.h>
 #import <YouTubeHeader/YTDefaultSheetController.h>
 
 @interface YTDefaultSheetController (YTNoAds)
@@ -47,6 +45,7 @@
 #import <YouTubeHeader/YTSettingsViewController.h>
 #import <YouTubeHeader/YTToastResponderEvent.h>
 #import <YouTubeHeader/YTUIUtils.h>
+#import <dlfcn.h>
 
 #define IS_ENABLED(k)    [[NSUserDefaults standardUserDefaults] boolForKey:k]
 #define INTFORVAL(v)     [[NSUserDefaults standardUserDefaults] integerForKey:v]
@@ -67,6 +66,35 @@
 
 #define SBSegmentsDidLoadNotification @"SBSegmentsDidLoad"
 #define SBMarkerTag  9900
+
+static inline NSArray<NSString *> *SBAllCategories(void) {
+    static NSArray *cats;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        cats = @[@"sponsor", @"intro", @"outro", @"interaction", @"selfpromo",
+                 @"music_offtopic", @"preview", @"poi_highlight", @"filler"];
+    });
+    return cats;
+}
+
+static inline NSString *SBShortCategoryName(NSString *category) {
+    static NSDictionary *names;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        names = @{
+            @"sponsor":        @"Sponsor",
+            @"intro":          @"Intro",
+            @"outro":          @"Endcards",
+            @"interaction":    @"Interaction",
+            @"selfpromo":      @"Self-promotion",
+            @"music_offtopic": @"Non-music",
+            @"preview":        @"Preview",
+            @"poi_highlight":  @"Highlight",
+            @"filler":         @"Filler",
+        };
+    });
+    return names[category] ?: category;
+}
 
 typedef NS_ENUM(NSInteger, SBSegmentAction) {
     SBSegmentActionDisable  = 0,

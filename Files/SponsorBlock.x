@@ -33,20 +33,10 @@ NSString *SBCacheSizeFormatted() {
     return [NSString stringWithFormat:@"%.1f MB", byteCount / (1024.0 * 1024.0)];
 }
 
-static NSArray<NSString *> *sbAllCategories() {
-    static NSArray *cats;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        cats = @[@"sponsor", @"intro", @"outro", @"interaction", @"selfpromo",
-                 @"music_offtopic", @"preview", @"poi_highlight", @"filler"];
-    });
-    return cats;
-}
-
 static NSArray<NSString *> *sbEnabledCategories() {
     NSMutableArray *enabled = [NSMutableArray array];
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
-    for (NSString *cat in sbAllCategories())
+    for (NSString *cat in SBAllCategories())
         if ([ud integerForKey:SB_ACTION_KEY(cat)] != SBSegmentActionDisable)
             [enabled addObject:cat];
     return enabled;
@@ -60,25 +50,6 @@ UIColor *SBColorFromHex(NSString *hex) {
                            green:((val >>  8) & 0xFF) / 255.0
                             blue:( val        & 0xFF) / 255.0
                            alpha:1.0];
-}
-
-static NSString *SBLocalizedCategoryName(NSString *category) {
-    static NSDictionary *names;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        names = @{
-            @"sponsor":        @"Sponsor",
-            @"intro":          @"Intro",
-            @"outro":          @"Endcards",
-            @"interaction":    @"Interaction",
-            @"selfpromo":      @"Self-promotion",
-            @"music_offtopic": @"Non-music",
-            @"preview":        @"Preview",
-            @"poi_highlight":  @"Highlight",
-            @"filler":         @"Filler",
-        };
-    });
-    return names[category] ?: category;
 }
 
 @implementation SBSegment
@@ -199,12 +170,11 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 %new
 - (void)sbHandleTimeChange {
     if (!IS_ENABLED(SBEnabled) || !self.sbEnabledForVideo || self.isPlayingAd) return;
-    
+
     CGFloat currentTime = [self currentVideoMediaTime];
 
-    if (currentTime < self.sbLastSeenTime - 2.0) {
+    if (currentTime < self.sbLastSeenTime - 2.0)
         [self.sbSkippedSegments removeAllObjects];
-    }
     self.sbLastSeenTime = currentTime;
 
     float minDuration = FLOAT_FOR_KEY(SBMinDuration);
@@ -228,7 +198,7 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     if (!IS_ENABLED(SBShowNotifications)) return;
     float alertDuration = FLOAT_FOR_KEY(SBUnskipAlertDuration);
     if (alertDuration <= 0) alertDuration = 4.0;
-    NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped", SBLocalizedCategoryName(segment.category)];
+    NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped", SBShortCategoryName(segment.category)];
     float startTime = segment.startTime;
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -248,7 +218,7 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     [self.sbSkippedSegments addObject:segment.UUID];
     float alertDuration = FLOAT_FOR_KEY(SBSkipAlertDuration);
     if (alertDuration <= 0) alertDuration = 4.0;
-    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip?", SBLocalizedCategoryName(segment.category)];
+    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip?", SBShortCategoryName(segment.category)];
     float endTime = segment.endTime;
     __weak typeof(self) weakSelf = self;
     self.sbNotificationView = [SBSkipNotificationView
