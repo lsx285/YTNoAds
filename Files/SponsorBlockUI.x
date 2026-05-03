@@ -52,12 +52,20 @@
     [parentView addSubview:view];
 
     BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
-    CGFloat bottomOffset = isLandscape ? -30.0 : -70.0;[NSLayoutConstraint activateConstraints:@[
-        [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],[view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],[view.heightAnchor   constraintEqualToConstant:40.0],[label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],[label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],[label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
+    CGFloat bottomOffset = isLandscape ? -30.0 : -70.0;
+
+    [NSLayoutConstraint activateConstraints:@[
+        [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
+        [view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],
+        [view.heightAnchor   constraintEqualToConstant:40.0],
+        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],
+        [label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
+        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
     ]];
 
     view.alpha     = 0.0;
-    view.transform = CGAffineTransformMakeScale(0.9, 0.9);[UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:0 animations:^{
+    view.transform = CGAffineTransformMakeScale(0.9, 0.9);
+    [UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:0 animations:^{
         view.alpha     = 1.0;
         view.transform = CGAffineTransformIdentity;
     } completion:nil];
@@ -73,10 +81,11 @@
     [self dismiss];
 }
 
-- (void)dismiss {[UIView animateWithDuration:0.2 animations:^{
+- (void)dismiss {
+    [UIView animateWithDuration:0.2 animations:^{
         self.alpha     = 0.0;
         self.transform = CGAffineTransformMakeScale(0.9, 0.9);
-    } completion:^(BOOL _) {[self removeFromSuperview]; }];
+    } completion:^(BOOL _) { [self removeFromSuperview]; }];
 }
 
 @end
@@ -84,7 +93,7 @@
 static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *container) {
     if ([container respondsToSelector:@selector(modularPlayerBar)]) {
         id modular = container.modularPlayerBar;
-        if ([modular respondsToSelector:@selector(view)]) return[modular view];
+        if ([modular respondsToSelector:@selector(view)]) return [modular view];
     }
     if ([container respondsToSelector:@selector(segmentablePlayerBar)])
         return (UIView *)container.segmentablePlayerBar;
@@ -94,21 +103,39 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
 static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
     UIView *referenceView = nil;
     for (UIView *sub in playerBar.subviews) {
+        // Look for the actual "track" of the seekbar
         if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)] ||
             [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) {
             referenceView = sub;
             break;
         }
     }
-    CGFloat markerY = referenceView ? referenceView.frame.origin.y : (playerBar.bounds.size.height - SB_MARKER_HEIGHT_DEFAULT);
+
+    // Determine the height of the markers
     CGFloat markerHeight = MAX(SB_MARKER_HEIGHT_MIN, referenceView ? referenceView.frame.size.height : SB_MARKER_HEIGHT_DEFAULT);
+    
+    // Logic Fix: Calculate markerY to be centered vertically on the referenceView
+    CGFloat markerY;
+    if (referenceView) {
+        markerY = referenceView.frame.origin.y + (referenceView.frame.size.height - markerHeight) / 2.0;
+    } else {
+        markerY = (playerBar.bounds.size.height - markerHeight) / 2.0;
+    }
+
     for (UIView *sub in playerBar.subviews) {
         if (![sub isKindOfClass:[SBSegmentMarkerView class]]) continue;
         SBSegmentMarkerView *marker = (SBSegmentMarkerView *)sub;
+        
         CGFloat x = marker.startFrac * barWidth;
         CGFloat w = (marker.endFrac - marker.startFrac) * barWidth;
-        if (marker.isPoi) { w = SB_POI_WIDTH; x = MAX(0, x - (SB_POI_WIDTH / 2.0)); }
-        else w = MAX(SB_MARKER_HEIGHT_MIN, w);
+        
+        if (marker.isPoi) { 
+            w = SB_POI_WIDTH; 
+            x = MAX(0, x - (SB_POI_WIDTH / 2.0)); 
+        } else {
+            w = MAX(SB_MARKER_HEIGHT_MIN, w);
+        }
+        
         marker.frame = CGRectMake(x, markerY, w, markerHeight);
     }
 }
@@ -118,11 +145,13 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
     %orig;
     UIView *playerBar = sbPlayerBarFromContainer(self);
     if (!playerBar) return;
+    
     CGFloat barWidth = playerBar.bounds.size.width;
     if (barWidth <= 0) return;
     
+    // Performance guard: only update if width actually changed
     NSNumber *lastWidth = objc_getAssociatedObject(self, @selector(layoutSubviews));
-    if (lastWidth &&[lastWidth floatValue] == barWidth) return;
+    if (lastWidth && [lastWidth floatValue] == barWidth) return;
     objc_setAssociatedObject(self, @selector(layoutSubviews), @(barWidth), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     
     sbUpdateMarkerFrames(playerBar, barWidth);
@@ -139,21 +168,26 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
                                                  name:SBSegmentsDidLoadNotification
                                                object:self];
 }
+
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self name:SBSegmentsDidLoadNotification object:self];
     %orig;
 }
+
 %new
 - (void)sbSegmentsDidLoad:(NSNotification *)notification {
     @try {
         NSArray<SBSegment *> *segments = notification.userInfo[@"segments"];
         id overlay = [self activeVideoPlayerOverlay];
         if (!overlay || ![overlay respondsToSelector:@selector(playerBarController)]) return;
+        
         YTPlayerBarController *barController = [overlay playerBarController];
         YTInlinePlayerBarContainerView *containerView = barController.playerBar;
         if (!containerView) return;
+        
         UIView *playerBar = sbPlayerBarFromContainer(containerView);
         
+        // Use optimized reverse loop to clear old markers
         NSArray *barSubviews = playerBar.subviews;
         for (NSInteger i = barSubviews.count - 1; i >= 0; i--) {
             UIView *sub = barSubviews[i];
@@ -163,9 +197,11 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
         }
         
         if (!segments.count) return;
+
         CGFloat totalTime = [self currentVideoTotalMediaTime];
         CGFloat barWidth  = playerBar.bounds.size.width;
         if (totalTime <= 0 || barWidth <= 0) return;
+
         UIView *referenceView = nil, *scrubberView = nil;
         for (UIView *sub in playerBar.subviews) {
             if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)])
@@ -175,22 +211,34 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
             else if ([sub isKindOfClass:%c(YTPlayerBarScrubberDotDecorationView)])
                 scrubberView = sub;
         }
+
         for (SBSegment *segment in segments) {
             if (segment.action == SBSegmentActionDisable) continue;
+            
             CGFloat startFrac = segment.startTime / totalTime;
             CGFloat endFrac   = segment.endTime   / totalTime;
-            BOOL    isPoi     =[segment.category isEqualToString:@"poi_highlight"];
+            BOOL    isPoi     = [segment.category isEqualToString:@"poi_highlight"];
+            
             SBSegmentMarkerView *marker = [[SBSegmentMarkerView alloc] initWithFrame:CGRectZero];
             marker.backgroundColor        = segment.color;
             marker.userInteractionEnabled = NO;
             marker.startFrac              = startFrac;
             marker.endFrac                = endFrac;
             marker.isPoi                  = isPoi;
-            if (referenceView)[playerBar insertSubview:marker aboveSubview:referenceView];
-            else               [playerBar addSubview:marker];
+            
+            if (referenceView) {
+                [playerBar insertSubview:marker aboveSubview:referenceView];
+            } else {
+                [playerBar addSubview:marker];
+            }
         }
+        
         sbUpdateMarkerFrames(playerBar, barWidth);
-        if (scrubberView)[playerBar bringSubviewToFront:scrubberView.superview ?: scrubberView];
+        
+        // Ensure the scrubber dot stays on top of our markers
+        if (scrubberView) {
+            [playerBar bringSubviewToFront:scrubberView.superview ?: scrubberView];
+        }
     } @catch (NSException *e) {}
 }
 %end
