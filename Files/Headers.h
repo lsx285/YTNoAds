@@ -59,8 +59,8 @@
 #define SBSkipAlertDuration    @"YouModSBSkipAlertDuration"
 #define SBUnskipAlertDuration  @"YouModSBUnskipAlertDuration"
 
-#define SB_ACTION_KEY(cat) [NSString stringWithFormat:@"YouModSBAction_%@", cat]
-#define SB_COLOR_KEY(cat)  [NSString stringWithFormat:@"YouModSBColor_%@", cat]
+#define SB_ACTION_KEY(cat)[NSString stringWithFormat:@"YouModSBAction_%@", cat]
+#define SB_COLOR_KEY(cat)[NSString stringWithFormat:@"YouModSBColor_%@", cat]
 
 #define SBSegmentsDidLoadNotification @"SBSegmentsDidLoad"
 
@@ -143,6 +143,7 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, assign) BOOL sbShowNotifications;
 @property (nonatomic, assign) CGFloat sbSkipAlertDuration;
 @property (nonatomic, assign) CGFloat sbUnskipAlertDuration;
+@property (nonatomic, assign) BOOL sbIsPerformingSystemSkip;
 - (void)sbPerformSkip:(SBSegment *)segment;
 - (void)sbShowAskNotification:(SBSegment *)segment;
 - (void)sbTriggerLoadIfNeededForVideoID:(NSString *)videoID;

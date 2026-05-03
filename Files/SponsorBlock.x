@@ -119,6 +119,7 @@ UIColor *SBColorFromHex(NSString *hex) {
 %property (nonatomic, assign) BOOL                    sbShowNotifications;
 %property (nonatomic, assign) CGFloat                 sbSkipAlertDuration;
 %property (nonatomic, assign) CGFloat                 sbUnskipAlertDuration;
+%property (nonatomic, assign) BOOL                    sbIsPerformingSystemSkip;
 
 - (void)setContentVideoID:(NSString *)videoID {
     %orig;
@@ -156,6 +157,7 @@ UIColor *SBColorFromHex(NSString *hex) {
     self.sbEnabledForVideo = YES;
     self.sbSkippedSegments = [NSMutableSet set];
     self.sbIgnoredSegments = [NSMutableSet set];
+    self.sbIsPerformingSystemSkip = NO;
     self.sbLastSeenTime    = 0;
     self.sbSegments        = nil;
     self.sbHapticFeedback = IS_ENABLED(SBHapticFeedback);
@@ -182,7 +184,8 @@ UIColor *SBColorFromHex(NSString *hex) {
     CGFloat currentTime = [self currentVideoMediaTime];
     if (currentTime == self.sbLastSeenTime) return;
 
-    BOOL isManualSeek = (self.sbLastSeenTime > 0) && (fabs(currentTime - self.sbLastSeenTime) > SB_BACKWARD_SEEK_THRESH);
+    BOOL isManualSeek = (self.sbLastSeenTime > 0) && (fabs(currentTime - self.sbLastSeenTime) > SB_BACKWARD_SEEK_THRESH) && !self.sbIsPerformingSystemSkip;
+    self.sbIsPerformingSystemSkip = NO;
 
     if (currentTime < self.sbLastSeenTime - SB_BACKWARD_SEEK_THRESH) {
         [self.sbSkippedSegments removeAllObjects];
@@ -211,6 +214,7 @@ UIColor *SBColorFromHex(NSString *hex) {
 %new
 - (void)sbPerformSkip:(SBSegment *)segment {
     [self.sbSkippedSegments addObject:segment.UUID];
+    self.sbIsPerformingSystemSkip = YES;
     [self seekToTime:(CGFloat)segment.endTime];
     
     if (self.sbHapticFeedback) AudioServicesPlaySystemSound(SB_HAPTIC_SOUND_ID);
@@ -252,7 +256,10 @@ UIColor *SBColorFromHex(NSString *hex) {
        buttonTitle:@"Skip"
             action:^{ 
                 __strong typeof(weakSelf) ss = weakSelf; 
-                if (ss) [ss seekToTime:(CGFloat)endTime]; 
+                if (ss) {
+                    ss.sbIsPerformingSystemSkip = YES;
+                    [ss seekToTime:(CGFloat)endTime]; 
+                }
             }
           duration:self.sbSkipAlertDuration];
 }
