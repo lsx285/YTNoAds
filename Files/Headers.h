@@ -189,8 +189,6 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, assign) BOOL sbEnabledForVideo;
 - (void)sbPerformSkip:(SBSegment *)segment;
 - (void)sbShowAskNotification:(SBSegment *)segment;
-- (void)sbShowHighlightBannerIfNeeded:(NSArray<SBSegment *> *)segments;
-- (void)sbSkipToHighlight;
 @end
 
 @interface YTSegmentableInlinePlayerBarView : UIView

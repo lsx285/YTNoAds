@@ -176,7 +176,6 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
         [[NSNotificationCenter defaultCenter] postNotificationName:SBSegmentsDidLoadNotification
                                                             object:strongSelf
                                                           userInfo:@{@"segments": segments}];
-        [strongSelf sbShowHighlightBannerIfNeeded:segments];
     }];
 }
 
@@ -249,40 +248,6 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
        buttonTitle:@"Skip"
             action:^{ __strong typeof(weakSelf) ss = weakSelf; if (ss) [ss seekToTime:(CGFloat)endTime]; }
           duration:alertDuration];
-}
-
-%new
-- (void)sbShowHighlightBannerIfNeeded:(NSArray<SBSegment *> *)segments {
-    for (SBSegment *seg in segments) {
-        if ([seg.category isEqualToString:@"poi_highlight"] &&
-            [seg configuredAction] == SBSegmentActionSkipTo) {
-            __weak typeof(self) weakSelf = self;
-            self.sbNotificationView = [SBSkipNotificationView
-                showInView:self.playerView
-                   message:@"Highlight available. Jump to the point?"
-               buttonTitle:@"Skip"
-                    action:^{ __strong typeof(weakSelf) ss = weakSelf; if (ss) [ss sbSkipToHighlight]; }
-                  duration:8.0];
-            break;
-        }
-    }
-}
-
-%new
-- (void)sbSkipToHighlight {
-    for (SBSegment *segment in self.sbSegments) {
-        if ([segment.category isEqualToString:@"poi_highlight"]) {
-            [self seekToTime:(CGFloat)segment.startTime];
-            if (IS_ENABLED(SBShowNotifications))
-                self.sbNotificationView = [SBSkipNotificationView
-                    showInView:self.playerView
-                       message:@"Jumped to highlight"
-                   buttonTitle:nil
-                        action:nil
-                      duration:2.0];
-            break;
-        }
-    }
 }
 
 %end
