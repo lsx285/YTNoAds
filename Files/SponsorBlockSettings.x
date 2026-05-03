@@ -154,7 +154,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)section {
-    if (section == 0) return 7;
+    if (section == 0) return 6;
     if (section == 1) return 2;
     return (NSInteger)SBCategories().count * 2;
 }
@@ -202,7 +202,6 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     dispatch_once(&once, ^{
         defs = @[
             @{@"title": @"Enable SponsorBlock",       @"desc": @"Skip sponsored segments using community data.",              @"key": SBEnabled},
-            @{@"title": @"Show overlay button",        @"desc": @"Display a SponsorBlock toggle button in the player.",        @"key": SBShowButton},
             @{@"title": @"Show skip notifications",    @"desc": @"Show a banner when a segment is auto-skipped.",              @"key": SBShowNotifications},
             @{@"title": @"Segments in feed",           @"desc": @"Show colored segments on feed player progress bars.",        @"key": SBSegmentsInFeed},
             @{@"title": @"Segments in mini-player",    @"desc": @"Show colored segments on the mini-player progress bar.",     @"key": SBSegmentsInMiniPlayer},
@@ -445,7 +444,6 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{
         SBEnabled:              @YES,
-        SBShowButton:           @YES,
         SBShowNotifications:    @YES,
         SBAudioNotification:    @NO,
         SBSegmentsInFeed:       @NO,

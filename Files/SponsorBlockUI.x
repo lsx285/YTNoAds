@@ -237,58 +237,6 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
 %end
 %end
 
-%hook YTMainAppControlsOverlayView
-
-- (void)layoutSubviews {
-    %orig;
-
-    if (!IS_ENABLED(SBEnabled) || !IS_ENABLED(SBShowButton)) {
-        [[self viewWithTag:SBToggleTag] removeFromSuperview];
-        return;
-    }
-
-    UIButton *btn = (UIButton *)[self viewWithTag:SBToggleTag];
-    if (!btn) {
-        btn = [UIButton buttonWithType:UIButtonTypeCustom];
-        btn.tag = SBToggleTag;
-        [btn setImage:[UIImage systemImageNamed:@"shield.fill"
-                             withConfiguration:[UIImageSymbolConfiguration
-                                 configurationWithPointSize:20 weight:UIImageSymbolWeightMedium]]
-             forState:UIControlStateNormal];
-        btn.tintColor = [UIColor colorWithRed:0.4 green:0.8 blue:1.0 alpha:1.0];
-        [btn addTarget:self action:@selector(sbButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
-        [self addSubview:btn];
-    }
-
-    btn.frame = CGRectMake(self.bounds.size.width - 52.0, 52.0, 40.0, 40.0);
-}
-
-%new
-- (void)sbButtonTapped:(UIButton *)sender {
-    YTPlayerViewController *pvc = nil;
-    if ([self respondsToSelector:@selector(playerViewController)])
-        pvc = [self performSelector:@selector(playerViewController)];
-
-    if (!pvc) {
-        UIResponder *r = self;
-        while ((r = r.nextResponder))
-            if ([r isKindOfClass:%c(YTPlayerViewController)]) { pvc = (YTPlayerViewController *)r; break; }
-    }
-    if (!pvc) return;
-
-    BOOL enabled = !pvc.sbEnabledForVideo;
-    pvc.sbEnabledForVideo = enabled;
-    sender.tintColor = enabled ? [UIColor colorWithRed:0.4 green:0.8 blue:1.0 alpha:1.0]
-                               : [UIColor grayColor];
-
-    NSArray *segments = (enabled && pvc.sbSegments.count) ? pvc.sbSegments : @[];
-    [[NSNotificationCenter defaultCenter] postNotificationName:SBSegmentsDidLoadNotification
-                                                        object:pvc
-                                                      userInfo:@{@"segments": segments}];
-}
-
-%end
-
 %ctor {
     %init;
     %init(SBObserver);

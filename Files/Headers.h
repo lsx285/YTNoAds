@@ -1,4 +1,3 @@
-// Headers.h — YTNoAds
 #import <YouTubeHeader/_ASDisplayView.h>
 #import <YouTubeHeader/YTIIcon.h>
 #import <YouTubeHeader/YTRightNavigationButtons.h>
@@ -57,7 +56,6 @@
 
 // SponsorBlock preference keys
 #define SBEnabled              @"YouModSBEnabled"
-#define SBShowButton           @"YouModSBShowButton"
 #define SBShowNotifications    @"YouModSBShowNotifications"
 #define SBAudioNotification    @"YouModSBAudioNotification"
 #define SBSegmentsInFeed       @"YouModSBSegmentsInFeed"
@@ -73,7 +71,6 @@
 // Shared constants
 #define SBSegmentsDidLoadNotification @"SBSegmentsDidLoad"
 #define SBMarkerTag  9900
-#define SBToggleTag  9901
 
 // ─── YouTube interfaces ───────────────────────────────────────────────────────
 
