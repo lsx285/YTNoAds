@@ -11,19 +11,18 @@ static const NSInteger SBSection = 'ytsb';
 - (NSArray<NSNumber *> *)orderedCategories {
     if (self.type != 1 || class_getClassMethod(objc_getClass("YTSettingsGroupData"), @selector(tweaks)))
         return %orig;
-    NSMutableArray *cats = [%orig mutableCopy];
-    [cats insertObject:@(SBSection) atIndex:0];
+    NSMutableArray *cats = [%orig mutableCopy];[cats insertObject:@(SBSection) atIndex:0];
     return [cats copy];
 }
 %end
 
 %hook YTAppSettingsPresentationData
 + (NSArray<NSNumber *> *)settingsCategoryOrder {
-    NSMutableArray<NSNumber *> *order = [%orig mutableCopy];
+    NSMutableArray<NSNumber *> *order =[%orig mutableCopy];
     NSUInteger idx = [order indexOfObject:@(1)];
     if (idx != NSNotFound)
         [order insertObject:@(SBSection) atIndex:idx + 1];
-    return [order copy];
+    return[order copy];
 }
 %end
 
@@ -33,10 +32,10 @@ static const NSInteger SBSection = 'ytsb';
     %orig;
     if (category != (NSUInteger)SBSection) return;
 
-    YTSettingsViewController *settingsVC = [self valueForKey:@"_settingsViewControllerDelegate"];
+    YTSettingsViewController *settingsVC =[self valueForKey:@"_settingsViewControllerDelegate"];
     Class Item = %c(YTSettingsSectionItem);
 
-    YTSettingsSectionItem *sbRow = [Item
+    YTSettingsSectionItem *sbRow =[Item
         itemWithTitle:@"SponsorBlock"
         accessibilityIdentifier:nil
         detailTextBlock:nil
@@ -59,11 +58,9 @@ static const NSInteger SBSection = 'ytsb';
     NSMutableArray<YTSettingsSectionItem *> *items = [NSMutableArray arrayWithObject:sbRow];
 
     if ([settingsVC respondsToSelector:
-            @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)])
-        [settingsVC setSectionItems:items forCategory:SBSection title:@"SponsorBlock"
+            @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)])[settingsVC setSectionItems:items forCategory:SBSection title:@"SponsorBlock"
                                icon:icon titleDescription:nil headerHidden:YES];
-    else
-        [settingsVC setSectionItems:items forCategory:SBSection title:@"SponsorBlock"
+    else[settingsVC setSectionItems:items forCategory:SBSection title:@"SponsorBlock"
                    titleDescription:nil headerHidden:YES];
 }
 

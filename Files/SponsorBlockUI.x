@@ -1,6 +1,15 @@
 #import "Headers.h"
 #import <objc/message.h>
 
+@interface SBSegmentMarkerView : UIView
+@property (nonatomic, assign) CGFloat startFrac;
+@property (nonatomic, assign) CGFloat endFrac;
+@property (nonatomic, assign) BOOL isPoi;
+@end
+
+@implementation SBSegmentMarkerView
+@end
+
 @implementation SBSkipNotificationView
 
 + (instancetype)showInView:(UIView *)parentView message:(NSString *)message
@@ -8,13 +17,12 @@
                   duration:(NSTimeInterval)duration {
     if (!parentView) return nil;
 
-    for (UIView *sub in [parentView.subviews copy])
-        if ([sub isKindOfClass:[SBSkipNotificationView class]])
-            [(SBSkipNotificationView *)sub dismiss];
+    for (UIView *sub in[parentView.subviews copy])
+        if ([sub isKindOfClass:[SBSkipNotificationView class]])[(SBSkipNotificationView *)sub dismiss];
 
     SBSkipNotificationView *view = [[SBSkipNotificationView alloc] initWithFrame:CGRectZero];
     view.translatesAutoresizingMaskIntoConstraints = NO;
-    view.backgroundColor     = [UIColor colorWithWhite:0.0 alpha:0.9];
+    view.backgroundColor     =[UIColor colorWithWhite:0.0 alpha:0.9];
     view.layer.cornerRadius  = 20.0;
     view.layer.shadowColor   = [UIColor blackColor].CGColor;
     view.layer.shadowOffset  = CGSizeMake(0, 4);
@@ -23,14 +31,13 @@
     view.userInteractionEnabled = YES;
     view.onAction            = action;
 
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];
-    [view addGestureRecognizer:tap];
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];[view addGestureRecognizer:tap];
 
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.translatesAutoresizingMaskIntoConstraints = NO;
     label.text          = message;
     label.textColor     = [UIColor whiteColor];
-    label.font          = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+    label.font          =[UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
     label.numberOfLines = 1;
     label.textAlignment = NSTextAlignmentCenter;
     view.messageLabel   = label;
@@ -41,19 +48,12 @@
     BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
     CGFloat bottomOffset = isLandscape ? -30.0 : -70.0;
 
-    [NSLayoutConstraint activateConstraints:@[
-        [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
-        [view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],
-        [view.heightAnchor   constraintEqualToConstant:40.0],
-
-        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],
-        [label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
+    [NSLayoutConstraint activateConstraints:@[[view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],[view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],[view.heightAnchor   constraintEqualToConstant:40.0],[label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],[label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
         [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
     ]];
 
     view.alpha     = 0.0;
-    view.transform = CGAffineTransformMakeScale(0.9, 0.9);
-    [UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:0 animations:^{
+    view.transform = CGAffineTransformMakeScale(0.9, 0.9);[UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:0 animations:^{
         view.alpha     = 1.0;
         view.transform = CGAffineTransformIdentity;
     } completion:nil];
@@ -69,8 +69,7 @@
     [self dismiss];
 }
 
-- (void)dismiss {
-    [UIView animateWithDuration:0.2 animations:^{
+- (void)dismiss {[UIView animateWithDuration:0.2 animations:^{
         self.alpha     = 0.0;
         self.transform = CGAffineTransformMakeScale(0.9, 0.9);
     } completion:^(BOOL _) { [self removeFromSuperview]; }];
@@ -106,17 +105,13 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
     CGFloat markerY      = referenceView ? referenceView.frame.origin.y : (playerBar.bounds.size.height - 3.0);
     CGFloat markerHeight = MAX(2.0, referenceView ? referenceView.frame.size.height : 3.0);
     for (UIView *sub in playerBar.subviews) {
-        if (sub.tag != SBMarkerTag) continue;
-        NSArray *data = objc_getAssociatedObject(sub, @selector(sbSegmentData));
-        if (data.count < 3) continue;
-        CGFloat startFrac = [data[0] floatValue];
-        CGFloat endFrac   = [data[1] floatValue];
-        BOOL    isPoi     = [data[2] boolValue];
-        CGFloat x = startFrac * barWidth;
-        CGFloat w = (endFrac - startFrac) * barWidth;
-        if (isPoi) { w = 3.0; x = MAX(0, x - 1.5); }
+        if (![sub isKindOfClass:[SBSegmentMarkerView class]]) continue;
+        SBSegmentMarkerView *marker = (SBSegmentMarkerView *)sub;
+        CGFloat x = marker.startFrac * barWidth;
+        CGFloat w = (marker.endFrac - marker.startFrac) * barWidth;
+        if (marker.isPoi) { w = 3.0; x = MAX(0, x - 1.5); }
         else w = MAX(2.0, w);
-        sub.frame = CGRectMake(x, markerY, w, markerHeight);
+        marker.frame = CGRectMake(x, markerY, w, markerHeight);
     }
 }
 %end
@@ -139,14 +134,14 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
 - (void)sbSegmentsDidLoad:(NSNotification *)notification {
     @try {
         NSArray<SBSegment *> *segments = notification.userInfo[@"segments"];
-        id overlay = [self activeVideoPlayerOverlay];
+        id overlay =[self activeVideoPlayerOverlay];
         if (!overlay || ![overlay respondsToSelector:@selector(playerBarController)]) return;
         YTPlayerBarController *barController = [overlay playerBarController];
         YTInlinePlayerBarContainerView *containerView = barController.playerBar;
         if (!containerView) return;
         UIView *playerBar = sbPlayerBarFromContainer(containerView);
-        for (UIView *sub in [playerBar.subviews copy])
-            if (sub.tag == SBMarkerTag) [sub removeFromSuperview];
+        for (UIView *sub in[playerBar.subviews copy])
+            if ([sub isKindOfClass:[SBSegmentMarkerView class]]) [sub removeFromSuperview];
         if (!segments.count) return;
         CGFloat totalTime = [self currentVideoTotalMediaTime];
         CGFloat barWidth  = playerBar.bounds.size.width;
@@ -155,7 +150,7 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
         for (UIView *sub in playerBar.subviews) {
             if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)])
                 referenceView = sub;
-            else if (!referenceView && [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)])
+            else if (!referenceView &&[sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)])
                 referenceView = sub;
             else if ([sub isKindOfClass:%c(YTPlayerBarScrubberDotDecorationView)])
                 scrubberView = sub;
@@ -163,7 +158,7 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
         CGFloat markerY      = referenceView ? referenceView.frame.origin.y : (playerBar.bounds.size.height - 3.0);
         CGFloat markerHeight = MAX(2.0, referenceView ? referenceView.frame.size.height : 3.0);
         for (SBSegment *segment in segments) {
-            if ([segment configuredAction] == SBSegmentActionDisable) continue;
+            if (segment.action == SBSegmentActionDisable) continue;
             CGFloat startFrac = segment.startTime / totalTime;
             CGFloat endFrac   = segment.endTime   / totalTime;
             BOOL    isPoi     = [segment.category isEqualToString:@"poi_highlight"];
@@ -171,17 +166,16 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
             CGFloat w = (endFrac - startFrac) * barWidth;
             if (isPoi) { w = 3.0; x = MAX(0, x - 1.5); }
             else w = MAX(2.0, w);
-            UIView *marker = [[UIView alloc] initWithFrame:CGRectMake(x, markerY, w, markerHeight)];
-            marker.backgroundColor        = [segment segmentColor];
+            SBSegmentMarkerView *marker = [[SBSegmentMarkerView alloc] initWithFrame:CGRectMake(x, markerY, w, markerHeight)];
+            marker.backgroundColor        = segment.color;
             marker.userInteractionEnabled = NO;
-            marker.tag                    = SBMarkerTag;
-            objc_setAssociatedObject(marker, @selector(sbSegmentData),
-                                     @[@(startFrac), @(endFrac), @(isPoi)],
-                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            if (referenceView) [playerBar insertSubview:marker aboveSubview:referenceView];
+            marker.startFrac              = startFrac;
+            marker.endFrac                = endFrac;
+            marker.isPoi                  = isPoi;
+            if (referenceView)[playerBar insertSubview:marker aboveSubview:referenceView];
             else               [playerBar addSubview:marker];
         }
-        if (scrubberView) [playerBar bringSubviewToFront:scrubberView.superview ?: scrubberView];
+        if (scrubberView)[playerBar bringSubviewToFront:scrubberView.superview ?: scrubberView];
     } @catch (NSException *e) {}
 }
 %end

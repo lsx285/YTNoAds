@@ -34,14 +34,13 @@ static NSString *SBActionLabel(NSInteger action) {
 }
 
 static NSString *SBHexFromColor(UIColor *color) {
-    CGFloat r, g, b, a;
-    [color getRed:&r green:&g blue:&b alpha:&a];
-    return [NSString stringWithFormat:@"#%02X%02X%02X", (int)(r * 255), (int)(g * 255), (int)(b * 255)];
+    CGFloat r, g, b, a;[color getRed:&r green:&g blue:&b alpha:&a];
+    return[NSString stringWithFormat:@"#%02X%02X%02X", (int)(r * 255), (int)(g * 255), (int)(b * 255)];
 }
 
 #define SB_SUPER_VOID(sel) \
     do { \
-        Class _base = objc_getClass("YTStyledViewController") ?: [UIViewController class]; \
+        Class _base = objc_getClass("YTStyledViewController") ?:[UIViewController class]; \
         struct objc_super _sup = { self, _base }; \
         ((void (*)(struct objc_super *, SEL))objc_msgSendSuper)(&_sup, @selector(sel)); \
     } while (0)
@@ -73,7 +72,7 @@ static NSString *SBHexFromColor(UIColor *color) {
     CGFloat step = (2.0 * M_PI) / 64;
     for (NSInteger i = 0; i < 64; i++) {
         CGFloat start = i * step - M_PI_2;
-        CGContextSetStrokeColorWithColor(ctx, [UIColor colorWithHue:(CGFloat)i / 64 saturation:1 brightness:1 alpha:1].CGColor);
+        CGContextSetStrokeColorWithColor(ctx,[UIColor colorWithHue:(CGFloat)i / 64 saturation:1 brightness:1 alpha:1].CGColor);
         CGContextSetLineWidth(ctx, ringW);
         CGContextAddArc(ctx, cx, cy, radius, start, start + step + 0.02, 0);
         CGContextStrokePath(ctx);
@@ -82,8 +81,7 @@ static NSString *SBHexFromColor(UIColor *color) {
     [[UIBezierPath bezierPathWithOvalInRect:CGRectInset(sq, ringW + 2, ringW + 2)] fill];
 }
 - (void)setFillColor:(UIColor *)fillColor {
-    _fillColor = fillColor;
-    [self setNeedsDisplay];
+    _fillColor = fillColor;[self setNeedsDisplay];
 }
 @end
 
@@ -103,7 +101,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 - (void)setActiveColorIndexPath:(NSIndexPath *)ip { objc_setAssociatedObject(self, kSBColorIdxKey, ip, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
 - (UIColor *)sbTextColor { return (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) ? [UIColor whiteColor] : [UIColor labelColor]; }
 - (UIColor *)sbSecondaryTextColor { return [UIColor colorWithWhite:0.55 alpha:1.0]; }
-- (UIColor *)sbAccentColor { return [UIColor colorWithRed:0.6 green:0.2 blue:0.9 alpha:1.0]; }
+- (UIColor *)sbAccentColor { return[UIColor colorWithRed:0.6 green:0.2 blue:0.9 alpha:1.0]; }
 - (void)viewDidLoad {
     SB_SUPER_VOID(viewDidLoad);
     self.title = @"SponsorBlock";
@@ -114,8 +112,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     tv.separatorStyle = UITableViewCellSeparatorStyleNone;
     tv.estimatedRowHeight = 60;
     tv.rowHeight = UITableViewAutomaticDimension;
-    tv.backgroundColor = (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) ? [UIColor blackColor] : [UIColor systemBackgroundColor];
-    [self.view addSubview:tv];
+    tv.backgroundColor = (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) ? [UIColor blackColor] : [UIColor systemBackgroundColor];[self.view addSubview:tv];
     [self setSbTableView:tv];
 }
 - (void)viewWillAppear:(BOOL)animated {
@@ -135,13 +132,10 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     UIView  *header = [[UIView alloc] init];
     UILabel *label  = [[UILabel alloc] init];
     label.text = title;
-    label.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
-    label.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
-    label.translatesAutoresizingMaskIntoConstraints = NO;
-    [header addSubview:label];
-    [NSLayoutConstraint activateConstraints:@[
-        [label.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],
-        [label.bottomAnchor  constraintEqualToAnchor:header.bottomAnchor  constant:-6],
+    label.textColor =[UIColor colorWithWhite:0.6 alpha:1.0];
+    label.font =[UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
+    label.translatesAutoresizingMaskIntoConstraints = NO;[header addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[[label.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],[label.bottomAnchor  constraintEqualToAnchor:header.bottomAnchor  constant:-6],
     ]];
     return header;
 }
@@ -155,9 +149,9 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     return UITableViewAutomaticDimension;
 }
 - (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (indexPath.section == 0) return [self toggleCellForRow:indexPath.row tableView:tv];
-    if (indexPath.section == 1) return [self sliderCellForRow:indexPath.row tableView:tv];
-    if (indexPath.section == 3) return [self cacheCellWithTableView:tv];
+    if (indexPath.section == 0) return[self toggleCellForRow:indexPath.row tableView:tv];
+    if (indexPath.section == 1) return[self sliderCellForRow:indexPath.row tableView:tv];
+    if (indexPath.section == 3) return[self cacheCellWithTableView:tv];
     return [self segmentCellForRow:indexPath.row tableView:tv];
 }
 static NSDictionary *sbToggleDefAtRow(NSInteger row) {
@@ -180,9 +174,9 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.textLabel.textColor = [self sbTextColor];
-    cell.textLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
-    cell.detailTextLabel.textColor = [self sbSecondaryTextColor];
-    cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
+    cell.textLabel.font =[UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
+    cell.detailTextLabel.textColor =[self sbSecondaryTextColor];
+    cell.detailTextLabel.font =[UIFont systemFontOfSize:13];
     cell.detailTextLabel.numberOfLines = 0;
     NSDictionary *def = sbToggleDefAtRow(row);
     cell.textLabel.text = def[@"title"];
@@ -190,8 +184,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     UISwitch *sw = [[UISwitch alloc] init];
     sw.on = [[NSUserDefaults standardUserDefaults] boolForKey:def[@"key"]];
     sw.onTintColor = [self sbAccentColor];
-    sw.tag = row;
-    [sw addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
+    sw.tag = row;[sw addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
     cell.accessoryView = sw;
     return cell;
 }
@@ -231,32 +224,21 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     slider.maximumValue = maxVal;
     slider.value = cur;
     slider.minimumTrackTintColor = [self sbAccentColor];
-    slider.maximumTrackTintColor = [UIColor colorWithWhite:0.3 alpha:1.0];
+    slider.maximumTrackTintColor =[UIColor colorWithWhite:0.3 alpha:1.0];
     slider.translatesAutoresizingMaskIntoConstraints = NO;
-    slider.tag = row;
-    [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
+    slider.tag = row;[slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
 
     UILabel *valueLabel = [[UILabel alloc] init];
     valueLabel.text = [NSString stringWithFormat:@"%d %@", (int)cur, unit];
-    valueLabel.textColor = [self sbSecondaryTextColor];
+    valueLabel.textColor =[self sbSecondaryTextColor];
     valueLabel.font = [UIFont systemFontOfSize:13];
     valueLabel.textAlignment = NSTextAlignmentRight;
     valueLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    valueLabel.tag = 100 + row;
-
-    [cell.contentView addSubview:titleLabel];
-    [cell.contentView addSubview:slider];
-    [cell.contentView addSubview:valueLabel];
-    [NSLayoutConstraint activateConstraints:@[
-        [titleLabel.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:8],
-        [titleLabel.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],
-        [slider.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:8],
-        [slider.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],
-        [slider.trailingAnchor constraintEqualToAnchor:valueLabel.leadingAnchor constant:-8],
+    valueLabel.tag = 100 + row;[cell.contentView addSubview:titleLabel];
+    [cell.contentView addSubview:slider];[cell.contentView addSubview:valueLabel];
+    [NSLayoutConstraint activateConstraints:@[[titleLabel.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:8],[titleLabel.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],[slider.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:8],[slider.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],[slider.trailingAnchor constraintEqualToAnchor:valueLabel.leadingAnchor constant:-8],
         [slider.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-8],
-        [valueLabel.centerYAnchor constraintEqualToAnchor:slider.centerYAnchor],
-        [valueLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],
-        [valueLabel.widthAnchor constraintEqualToConstant:56],
+        [valueLabel.centerYAnchor constraintEqualToAnchor:slider.centerYAnchor],[valueLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],[valueLabel.widthAnchor constraintEqualToConstant:56],
     ]];
     return cell;
 }
@@ -273,10 +255,10 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 }
 - (UITableViewCell *)cacheCellWithTableView:(UITableView *)tv {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-    cell.backgroundColor = [UIColor clearColor];
+    cell.backgroundColor =[UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
-    cell.textLabel.textColor = [UIColor systemRedColor];
-    cell.textLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
+    cell.textLabel.textColor =[UIColor systemRedColor];
+    cell.textLabel.font =[UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
     cell.detailTextLabel.textColor = [self sbSecondaryTextColor];
     cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
     cell.textLabel.text = @"Clear segment cache";
@@ -286,7 +268,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 - (UITableViewCell *)segmentCellForRow:(NSInteger)row tableView:(UITableView *)tv {
     NSString *cat = SBAllCategories()[row / 2];
     NSString *catName = SBCategoryName(cat);
-    return (row % 2 == 1) ? [self colorCellForCategory:cat name:catName tableView:tv] : [self actionCellForCategory:cat name:catName tableView:tv];
+    return (row % 2 == 1) ?[self colorCellForCategory:cat name:catName tableView:tv] :[self actionCellForCategory:cat name:catName tableView:tv];
 }
 - (UITableViewCell *)actionCellForCategory:(NSString *)category name:(NSString *)catName tableView:(UITableView *)tv {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
@@ -294,35 +276,32 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.textLabel.text = catName;
     cell.textLabel.textColor = [self sbTextColor];
-    cell.textLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
+    cell.textLabel.font =[UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
     NSString  *actionKey = SB_ACTION_KEY(category);
     BOOL       isHighlight = [category isEqualToString:@"poi_highlight"];
     NSInteger  currentAction = [[NSUserDefaults standardUserDefaults] integerForKey:actionKey];
     UIButton *menuBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    [menuBtn setTitle:SBActionLabel(currentAction) forState:UIControlStateNormal];
-    [menuBtn setTitleColor:[self sbSecondaryTextColor] forState:UIControlStateNormal];
-    menuBtn.titleLabel.font = [UIFont systemFontOfSize:15];
+    [menuBtn setTitle:SBActionLabel(currentAction) forState:UIControlStateNormal];[menuBtn setTitleColor:[self sbSecondaryTextColor] forState:UIControlStateNormal];
+    menuBtn.titleLabel.font =[UIFont systemFontOfSize:15];
     menuBtn.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     [menuBtn setImage:[UIImage systemImageNamed:@"chevron.up.chevron.down"] forState:UIControlStateNormal];
     menuBtn.tintColor = [self sbSecondaryTextColor];
     NSArray *actionDefs = isHighlight
         ? @[@[@(SBSegmentActionDisable), @"Disabled"], @[@(SBSegmentActionSkipTo), @"Skip to"], @[@(SBSegmentActionDisplay), @"Show on bar"]]
         : @[@[@(SBSegmentActionDisable), @"Disabled"], @[@(SBSegmentActionAutoSkip), @"Auto-skip"], @[@(SBSegmentActionAsk), @"Ask to skip"], @[@(SBSegmentActionDisplay), @"Show on bar"]];
-    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:14];
-    NSMutableArray *menuActions = [NSMutableArray arrayWithCapacity:actionDefs.count];
+    UIImageSymbolConfiguration *cfg =[UIImageSymbolConfiguration configurationWithPointSize:14];
+    NSMutableArray *menuActions =[NSMutableArray arrayWithCapacity:actionDefs.count];
     for (NSArray *def in actionDefs) {
         NSInteger val = [def[0] integerValue];
         BOOL isCurrent = (val == currentAction);
-        UIAction *act = [UIAction actionWithTitle:def[1] image:isCurrent ? [UIImage systemImageNamed:@"checkmark" withConfiguration:cfg] : nil identifier:nil handler:^(__kindof UIAction *a) {
+        UIAction *act =[UIAction actionWithTitle:def[1] image:isCurrent ?[UIImage systemImageNamed:@"checkmark" withConfiguration:cfg] : nil identifier:nil handler:^(__kindof UIAction *a) {
             [[NSUserDefaults standardUserDefaults] setInteger:val forKey:actionKey];
             [[self sbTableView] reloadData];
         }];
-        if (isCurrent) act.state = UIMenuElementStateOn;
-        [menuActions addObject:act];
+        if (isCurrent) act.state = UIMenuElementStateOn;[menuActions addObject:act];
     }
-    menuBtn.menu = [UIMenu menuWithTitle:catName children:menuActions];
-    menuBtn.showsMenuAsPrimaryAction = YES;
-    [menuBtn sizeToFit];
+    menuBtn.menu =[UIMenu menuWithTitle:catName children:menuActions];
+    menuBtn.showsMenuAsPrimaryAction = YES;[menuBtn sizeToFit];
     cell.accessoryView = menuBtn;
     return cell;
 }
@@ -332,7 +311,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.textLabel.text = [NSString stringWithFormat:@"%@ color", catName];
     cell.textLabel.textColor = [self sbTextColor];
-    cell.textLabel.font = [UIFont systemFontOfSize:15];
+    cell.textLabel.font =[UIFont systemFontOfSize:15];
     NSString *hex = [[NSUserDefaults standardUserDefaults] stringForKey:SB_COLOR_KEY(category)];
     cell.accessoryView = [[SBColorCircleView alloc] initWithFrame:CGRectMake(0, 0, 34, 34) color:SBColorFromHex(hex)];
     return cell;
@@ -346,8 +325,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     if (indexPath.section != 2 || indexPath.row % 2 != 1) return;
     NSString *cat = SBAllCategories()[indexPath.row / 2];
     NSString *colorKey = SB_COLOR_KEY(cat);
-    [self setActiveColorKey:colorKey];
-    [self setActiveColorIndexPath:indexPath];
+    [self setActiveColorKey:colorKey];[self setActiveColorIndexPath:indexPath];
     UIColorPickerViewController *picker = [[UIColorPickerViewController alloc] init];
     picker.title = [NSString stringWithFormat:@"%@ color", SBCategoryName(cat)];
     picker.supportsAlpha = NO;

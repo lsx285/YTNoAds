@@ -7,35 +7,13 @@ static BOOL isProductList(YTICommand *command) {
 }
 
 static BOOL isAdDescription(NSString *description) {
-    static NSArray *adStrings;
+    if (!description) return NO;
+    static NSRegularExpression *regex;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        adStrings = @[
-            @"brand_promo",
-            @"carousel_footered_layout",
-            @"carousel_headered_layout",
-            @"eml.expandable_metadata",
-            @"feed_ad_metadata",
-            @"full_width_portrait_image_layout",
-            @"full_width_square_image_layout",
-            @"landscape_image_wide_button_layout",
-            @"post_shelf",
-            @"product_carousel",
-            @"product_engagement_panel",
-            @"product_item",
-            @"shopping_carousel",
-            @"shopping_item_card_list",
-            @"statement_banner",
-            @"square_image_layout",
-            @"text_image_button_layout",
-            @"text_search_ad",
-            @"video_display_full_layout",
-            @"video_display_full_buttoned_layout",
-        ];
+        regex =[NSRegularExpression regularExpressionWithPattern:@"brand_promo|carousel_footered_layout|carousel_headered_layout|eml\\.expandable_metadata|feed_ad_metadata|full_width_portrait_image_layout|full_width_square_image_layout|landscape_image_wide_button_layout|post_shelf|product_carousel|product_engagement_panel|product_item|shopping_carousel|shopping_item_card_list|statement_banner|square_image_layout|text_image_button_layout|text_search_ad|video_display_full_layout|video_display_full_buttoned_layout" options:0 error:nil];
     });
-    for (NSString *str in adStrings)
-        if ([description containsString:str]) return YES;
-    return NO;
+    return[regex firstMatchInString:description options:0 range:NSMakeRange(0, description.length)] != nil;
 }
 
 static BOOL isAdRenderer(YTIElementRenderer *renderer) {
@@ -51,22 +29,30 @@ static BOOL isAdReelModel(YTReelModel *model) {
 
 static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSectionRenderer *> *array) {
     NSMutableArray *newArray = [array mutableCopy];
-    NSIndexSet *removeIndexes = [newArray indexesOfObjectsPassingTest:^BOOL(YTIItemSectionRenderer *section, NSUInteger idx, BOOL *stop) {
+    for (NSInteger i = newArray.count - 1; i >= 0; i--) {
+        YTIItemSectionRenderer *section = newArray[i];
+        BOOL removeSection = NO;
+        
         if ([section isKindOfClass:%c(YTIShelfRenderer)]) {
             NSMutableArray *items = ((YTIShelfRenderer *)section).content.horizontalListRenderer.itemsArray;
-            [items removeObjectsAtIndexes:[items indexesOfObjectsPassingTest:^BOOL(YTIHorizontalListSupportedRenderers *item, NSUInteger i, BOOL *s) {
-                return isAdRenderer(item.elementRenderer);
-            }]];
+            for (NSInteger j = items.count - 1; j >= 0; j--) {
+                if (isAdRenderer([items[j] elementRenderer])) {[items removeObjectAtIndex:j];
+                }
+            }
+        } else if ([section isKindOfClass:%c(YTIItemSectionRenderer)]) {
+            NSMutableArray *contents = section.contentsArray;
+            if (contents.count > 1) {
+                for (NSInteger j = contents.count - 1; j >= 0; j--) {
+                    if (isAdRenderer([contents[j] elementRenderer])) {[contents removeObjectAtIndex:j];
+                    }
+                }
+            }
+            removeSection = contents.count > 0 && isAdRenderer(((YTIItemSectionSupportedRenderers *)[contents firstObject]).elementRenderer);
         }
-        if (![section isKindOfClass:%c(YTIItemSectionRenderer)]) return NO;
-        NSMutableArray *contents = section.contentsArray;
-        if (contents.count > 1)
-            [contents removeObjectsAtIndexes:[contents indexesOfObjectsPassingTest:^BOOL(YTIItemSectionSupportedRenderers *item, NSUInteger i, BOOL *s) {
-                return isAdRenderer(item.elementRenderer);
-            }]];
-        return isAdRenderer(((YTIItemSectionSupportedRenderers *)[contents firstObject]).elementRenderer);
-    }];
-    [newArray removeObjectsAtIndexes:removeIndexes];
+        if (removeSection) {
+            [newArray removeObjectAtIndex:i];
+        }
+    }
     return newArray;
 }
 
@@ -126,9 +112,11 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
     return isAdReelModel(model) ? nil : model;
 }
 - (void)setReels:(NSMutableOrderedSet<YTReelModel *> *)reels {
-    [reels removeObjectsAtIndexes:[reels indexesOfObjectsPassingTest:^BOOL(YTReelModel *obj, NSUInteger idx, BOOL *stop) {
-        return isAdReelModel(obj);
-    }]];
+    for (NSInteger i = reels.count - 1; i >= 0; i--) {
+        if (isAdReelModel(reels[i])) {
+            [reels removeObjectAtIndex:i];
+        }
+    }
     %orig;
 }
 %end
@@ -138,9 +126,11 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
     YTICommand *onUiReady = model.onUiReady;
     if ([onUiReady respondsToSelector:@selector(yt_commandExecutorCommand)]) {
         NSMutableArray<YTICommand *> *commands = [onUiReady yt_commandExecutorCommand].commandsArray;
-        [commands removeObjectsAtIndexes:[commands indexesOfObjectsPassingTest:^BOOL(YTICommand *cmd, NSUInteger idx, BOOL *stop) {
-            return isProductList(cmd);
-        }]];
+        for (NSInteger i = commands.count - 1; i >= 0; i--) {
+            if (isProductList(commands[i])) {
+                [commands removeObjectAtIndex:i];
+            }
+        }
     }
     if (isProductList(onUiReady)) model.onUiReady = nil;
     %orig;
@@ -156,8 +146,7 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
 
 %hook YTInnerTubeCollectionViewController
 - (void)displaySectionsWithReloadingSectionControllerByRenderer:(id)renderer {
-    NSMutableArray *sections = [self valueForKey:@"_sectionRenderers"];
-    [self setValue:filteredArray(sections) forKey:@"_sectionRenderers"];
+    [self setValue:filteredArray([self valueForKey:@"_sectionRenderers"]) forKey:@"_sectionRenderers"];
     %orig;
 }
 - (void)addSectionsFromArray:(NSArray<YTIItemSectionRenderer *> *)array {

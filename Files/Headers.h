@@ -30,13 +30,6 @@
 #import <YouTubeHeader/YTPlayerView.h>
 #import <YouTubeHeader/YTLabel.h>
 #import <YouTubeHeader/YTDefaultSheetController.h>
-
-@interface YTDefaultSheetController (YTNoAds)
-+ (instancetype)sheetControllerWithParentResponder:(id)responder;
-- (void)addAction:(YTActionSheetAction *)action;
-- (void)presentFromViewController:(UIViewController *)vc animated:(BOOL)animated completion:(void (^)(void))completion;
-@end
-
 #import <YouTubeHeader/YTSettingsGroupData.h>
 #import <YouTubeHeader/YTSettingsPickerViewController.h>
 #import <YouTubeHeader/YTSettingsSectionItem.h>
@@ -46,6 +39,12 @@
 #import <YouTubeHeader/YTToastResponderEvent.h>
 #import <YouTubeHeader/YTUIUtils.h>
 #import <dlfcn.h>
+
+@interface YTDefaultSheetController (YTNoAds)
++ (instancetype)sheetControllerWithParentResponder:(id)responder;
+- (void)addAction:(YTActionSheetAction *)action;
+- (void)presentFromViewController:(UIViewController *)vc animated:(BOOL)animated completion:(void (^)(void))completion;
+@end
 
 #define IS_ENABLED(k)    [[NSUserDefaults standardUserDefaults] boolForKey:k]
 #define INTFORVAL(v)     [[NSUserDefaults standardUserDefaults] integerForKey:v]
@@ -110,9 +109,9 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, assign) float startTime;
 @property (nonatomic, assign) float endTime;
 @property (nonatomic, strong) NSString *actionType;
+@property (nonatomic, assign) SBSegmentAction action;
+@property (nonatomic, strong) UIColor *color;
 + (instancetype)segmentWithUUID:(NSString *)UUID category:(NSString *)category start:(float)start end:(float)end action:(NSString *)actionType;
-- (SBSegmentAction)configuredAction;
-- (UIColor *)segmentColor;
 @end
 
 @interface SBRequest : NSObject
