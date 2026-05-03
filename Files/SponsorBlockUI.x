@@ -20,7 +20,11 @@
     view.layer.shadowOffset  = CGSizeMake(0, 4);
     view.layer.shadowRadius  = 10.0;
     view.layer.shadowOpacity = 0.5;
+    view.userInteractionEnabled = YES;
     view.onAction            = action;
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];
+    [view addGestureRecognizer:tap];
 
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.translatesAutoresizingMaskIntoConstraints = NO;
@@ -28,37 +32,23 @@
     label.textColor     = [UIColor whiteColor];
     label.font          = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
     label.numberOfLines = 1;
+    label.textAlignment = NSTextAlignmentCenter;
     view.messageLabel   = label;
     [view addSubview:label];
-
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    button.translatesAutoresizingMaskIntoConstraints = NO;
-    
-    NSString *displayTitle = [buttonTitle.lowercaseString containsString:@"unskip"] ? @"Go back" : buttonTitle;
-    [button setTitle:displayTitle forState:UIControlStateNormal];
-    [button setTitleColor:[UIColor colorWithRed:0.4 green:0.7 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
-    button.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightBold];
-    [button addTarget:view action:@selector(actionButtonTapped) forControlEvents:UIControlEventTouchUpInside];
-    view.actionButton = button;
-    [view addSubview:button];
 
     [parentView addSubview:view];
 
     BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
-    CGFloat bottomOffset = isLandscape ? -20.0 : -65.0;
+    CGFloat bottomOffset = isLandscape ? -30.0 : -80.0;
 
     [NSLayoutConstraint activateConstraints:@[
         [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
         [view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],
-        [view.widthAnchor    constraintLessThanOrEqualToAnchor:parentView.widthAnchor constant:-40.0],
         [view.heightAnchor   constraintEqualToConstant:40.0],
 
-        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:18.0],
-        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor],
-
-        [button.leadingAnchor constraintEqualToAnchor:label.trailingAnchor  constant:12.0],
-        [button.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:-18.0],
-        [button.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
+        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],
+        [label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
+        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
     ]];
 
     view.alpha     = 0.0;
@@ -74,7 +64,7 @@
     return view;
 }
 
-- (void)actionButtonTapped {
+- (void)handleTap {
     if (self.onAction) self.onAction();
     [self dismiss];
 }
