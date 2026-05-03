@@ -115,7 +115,6 @@ UIColor *SBColorFromHex(NSString *hex) {
 %property (nonatomic, strong) SBSkipNotificationView *sbNotificationView;
 %property (nonatomic, assign) BOOL                    sbEnabledForVideo;
 %property (nonatomic, assign) CGFloat                 sbLastSeenTime;
-%property (nonatomic, assign) CGFloat                 sbMinDuration;
 %property (nonatomic, assign) BOOL                    sbHapticFeedback;
 %property (nonatomic, assign) BOOL                    sbShowNotifications;
 %property (nonatomic, assign) CGFloat                 sbSkipAlertDuration;
@@ -159,7 +158,6 @@ UIColor *SBColorFromHex(NSString *hex) {
     self.sbIgnoredSegments = [NSMutableSet set];
     self.sbLastSeenTime    = 0;
     self.sbSegments        = nil;
-    self.sbMinDuration = FLOAT_FOR_KEY(SBMinDuration);
     self.sbHapticFeedback = IS_ENABLED(SBHapticFeedback);
     self.sbShowNotifications = IS_ENABLED(SBShowNotifications);
     self.sbSkipAlertDuration = FLOAT_FOR_KEY(SBSkipAlertDuration) > 0 ? FLOAT_FOR_KEY(SBSkipAlertDuration) : 4.0;
@@ -194,7 +192,6 @@ UIColor *SBColorFromHex(NSString *hex) {
 
     for (SBSegment *segment in self.sbSegments) {
         if (segment.action == SBSegmentActionDisable || segment.action == SBSegmentActionDisplay || segment.action == SBSegmentActionSkipTo) continue;
-        if (segment.endTime - segment.startTime < self.sbMinDuration) continue;
         if (currentTime < segment.startTime || currentTime >= segment.endTime - 0.5) continue;
         
         if (isManualSeek) {

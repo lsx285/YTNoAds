@@ -56,12 +56,11 @@
 #define SBSegmentsInFeed       @"YouModSBSegmentsInFeed"
 #define SBSegmentsInMiniPlayer @"YouModSBSegmentsInMiniPlayer"
 #define SBShowDuration         @"YouModSBShowDuration"
-#define SBMinDuration          @"YouModSBMinDuration"
 #define SBSkipAlertDuration    @"YouModSBSkipAlertDuration"
 #define SBUnskipAlertDuration  @"YouModSBUnskipAlertDuration"
 
-#define SB_ACTION_KEY(cat)[NSString stringWithFormat:@"YouModSBAction_%@", cat]
-#define SB_COLOR_KEY(cat)[NSString stringWithFormat:@"YouModSBColor_%@", cat]
+#define SB_ACTION_KEY(cat) [NSString stringWithFormat:@"YouModSBAction_%@", cat]
+#define SB_COLOR_KEY(cat)  [NSString stringWithFormat:@"YouModSBColor_%@", cat]
 
 #define SBSegmentsDidLoadNotification @"SBSegmentsDidLoad"
 
@@ -140,7 +139,6 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, strong) SBSkipNotificationView *sbNotificationView;
 @property (nonatomic, assign) BOOL sbEnabledForVideo;
 @property (nonatomic, assign) CGFloat sbLastSeenTime;
-@property (nonatomic, assign) CGFloat sbMinDuration;
 @property (nonatomic, assign) BOOL sbHapticFeedback;
 @property (nonatomic, assign) BOOL sbShowNotifications;
 @property (nonatomic, assign) CGFloat sbSkipAlertDuration;
