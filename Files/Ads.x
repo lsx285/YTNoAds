@@ -64,7 +64,7 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
             [contents removeObjectsAtIndexes:[contents indexesOfObjectsPassingTest:^BOOL(YTIItemSectionSupportedRenderers *item, NSUInteger i, BOOL *s) {
                 return isAdRenderer(item.elementRenderer);
             }]];
-        return isAdRenderer([contents firstObject].elementRenderer);
+        return isAdRenderer(((YTIItemSectionSupportedRenderers *)[contents firstObject]).elementRenderer);
     }];
     [newArray removeObjectsAtIndexes:removeIndexes];
     return newArray;
