@@ -31,7 +31,6 @@
 #import <YouTubeHeader/YTLabel.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import <dlfcn.h>
-
 #import <YouTubeHeader/YTDefaultSheetController.h>
 
 @interface YTDefaultSheetController (YTNoAds)
@@ -49,12 +48,10 @@
 #import <YouTubeHeader/YTToastResponderEvent.h>
 #import <YouTubeHeader/YTUIUtils.h>
 
-// NSUserDefaults helpers
 #define IS_ENABLED(k)    [[NSUserDefaults standardUserDefaults] boolForKey:k]
 #define INTFORVAL(v)     [[NSUserDefaults standardUserDefaults] integerForKey:v]
 #define FLOAT_FOR_KEY(k) [[NSUserDefaults standardUserDefaults] floatForKey:k]
 
-// SponsorBlock preference keys
 #define SBEnabled              @"YouModSBEnabled"
 #define SBShowNotifications    @"YouModSBShowNotifications"
 #define SBAudioNotification    @"YouModSBAudioNotification"
@@ -68,83 +65,8 @@
 #define SB_ACTION_KEY(cat) [NSString stringWithFormat:@"YouModSBAction_%@", cat]
 #define SB_COLOR_KEY(cat)  [NSString stringWithFormat:@"YouModSBColor_%@", cat]
 
-// Shared constants
 #define SBSegmentsDidLoadNotification @"SBSegmentsDidLoad"
 #define SBMarkerTag  9900
-
-// ─── YouTube interfaces ───────────────────────────────────────────────────────
-
-@interface YTITopbarLogoRenderer : NSObject
-@property(readonly, nonatomic) YTIIcon *iconImage;
-@end
-
-@interface YTRightNavigationButtons (YTNoAds)
-@property (nonatomic, strong) YTQTMButton *notificationButton;
-@property (nonatomic, strong) YTQTMButton *searchButton;
-@end
-
-@interface YTMainAppVideoPlayerOverlayView (YTNoAds)
-@property (nonatomic, strong) YTQTMButton *playbackRouteButton;
-@end
-
-@interface YTNavigationBarTitleView : UIView
-@end
-
-@interface YTChipCloudCell : UICollectionViewCell
-@end
-
-@interface YTSearchViewController : UIViewController
-@end
-
-@interface YTPlayabilityResolutionUserActionUIController : NSObject
-- (void)confirmAlertDidPressConfirm;
-@end
-
-@interface YTPlayabilityResolutionUserActionUIControllerImpl : NSObject
-- (void)confirmAlertDidPressConfirm;
-@end
-
-@interface YTPivotBarViewController : UIViewController
-- (void)selectItemWithPivotIdentifier:(id)pivotIndentifier;
-@end
-
-@interface YTPlayerViewController (YTNoAds)
-- (void)setPlaybackRate:(float)rate;
-@end
-
-@interface SSOConfiguration : NSObject
-@end
-
-@interface YTVideoQualitySwitchOriginalController (YTNoAds)
-@property (retain, nonatomic) YTVideoQualitySwitchRedesignedController *redesignedController;
-@end
-
-@interface UIView (Private)
-@property (nonatomic, assign, readonly) BOOL _mapkit_isDarkModeEnabled;
-- (UIViewController *)_viewControllerForAncestor;
-@end
-
-@interface YTInlinePlayerBarContainerView (YTNoAds)
-@property (nonatomic, strong, readwrite) NSString *endTimeString;
-- (CGFloat)scrubXForScrubRange:(CGFloat)scrubRange;
-@end
-
-@interface YTSingleVideoController (YTNoAds)
-@property (nonatomic, assign, readonly) CGFloat totalMediaTime;
-@end
-
-@interface YTMainAppVideoPlayerOverlayViewController (YTNoAds)
-@property (nonatomic, strong, readwrite) YTPlayerBarController *playerBarController;
-@end
-
-@interface YTPlayerBarController (YTNoAds)
-- (void)didScrub:(UIPanGestureRecognizer *)gestureRecognizer;
-- (void)startScrubbing;
-- (void)didScrubToPoint:(CGPoint)point;
-- (void)endScrubbingForSeekSource:(int)seekSource;
-@end
-
-// ─── SponsorBlock types ───────────────────────────────────────────────────────
 
 typedef NS_ENUM(NSInteger, SBSegmentAction) {
     SBSegmentActionDisable  = 0,
@@ -187,11 +109,5 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 - (void)sbShowAskNotification:(SBSegment *)segment;
 @end
 
-@interface YTSegmentableInlinePlayerBarView : UIView
-@end
-
-@interface YTSegmentableInlinePlayerBarView (SponsorBlock)
-@property (nonatomic, strong) NSArray<UIView *> *sbMarkerViews;
-- (void)sbRenderSegments:(NSArray<SBSegment *> *)segments;
-- (void)sbClearSegments;
-@end
+void SBClearSegmentCache(void);
+NSString *SBCacheSizeFormatted(void);

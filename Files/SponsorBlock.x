@@ -8,6 +8,31 @@
 
 static NSMutableDictionary<NSString *, NSArray<SBSegment *> *> *sbSegmentCache;
 
+void SBClearSegmentCache() {
+    @synchronized(sbSegmentCache) {
+        [sbSegmentCache removeAllObjects];
+    }
+}
+
+NSString *SBCacheSizeFormatted() {
+    NSUInteger byteCount = 0;
+    @synchronized(sbSegmentCache) {
+        if (sbSegmentCache.count == 0) return @"0 KB";
+        for (NSString *key in sbSegmentCache) {
+            byteCount += [key lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+            for (SBSegment *seg in sbSegmentCache[key]) {
+                byteCount += [seg.UUID lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+                byteCount += [seg.category lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+                byteCount += [seg.actionType lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+                byteCount += sizeof(float) * 2;
+            }
+        }
+    }
+    if (byteCount < 1024) return [NSString stringWithFormat:@"%lu B", (unsigned long)byteCount];
+    if (byteCount < 1024 * 1024) return [NSString stringWithFormat:@"%.1f KB", byteCount / 1024.0];
+    return [NSString stringWithFormat:@"%.1f MB", byteCount / (1024.0 * 1024.0)];
+}
+
 static NSArray<NSString *> *sbAllCategories() {
     static NSArray *cats;
     static dispatch_once_t once;
@@ -57,7 +82,6 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 }
 
 @implementation SBSegment
-
 + (instancetype)segmentWithUUID:(NSString *)UUID category:(NSString *)category
                           start:(float)start end:(float)end action:(NSString *)actionType {
     SBSegment *seg = [[SBSegment alloc] init];
@@ -68,36 +92,28 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     seg.actionType = actionType;
     return seg;
 }
-
 - (SBSegmentAction)configuredAction {
     return (SBSegmentAction)[[NSUserDefaults standardUserDefaults] integerForKey:SB_ACTION_KEY(self.category)];
 }
-
 - (UIColor *)segmentColor {
     return SBColorFromHex([[NSUserDefaults standardUserDefaults] stringForKey:SB_COLOR_KEY(self.category)]);
 }
-
 @end
 
 @implementation SBRequest
-
 + (void)fetchSegmentsForVideoID:(NSString *)videoID completion:(void (^)(NSArray<SBSegment *> *))completion {
     if (!videoID.length) { if (completion) completion(@[]); return; }
-
     @synchronized(sbSegmentCache) {
         NSArray *cached = sbSegmentCache[videoID];
         if (cached) { if (completion) completion(cached); return; }
     }
-
     NSArray *categories = sbEnabledCategories();
     if (!categories.count) { if (completion) completion(@[]); return; }
-
     NSData *catJSON = [NSJSONSerialization dataWithJSONObject:categories options:0 error:nil];
     NSString *catParam = [[[NSString alloc] initWithData:catJSON encoding:NSUTF8StringEncoding]
         stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
     NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:
         @"https://sponsor.ajay.app/api/skipSegments?videoID=%@&categories=%@", videoID, catParam]];
-
     [[[NSURLSession sharedSession] dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         NSMutableArray<SBSegment *> *segments = [NSMutableArray array];
         if (!error && data && ((NSHTTPURLResponse *)response).statusCode == 200) {
@@ -106,7 +122,7 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
                 for (NSDictionary *item in json) {
                     NSArray *seg = item[@"segment"];
                     if (seg.count >= 2)
-                        [segments addObject:[SBSegment segmentWithUUID:item[@"UUID"]     ?: @""
+                        [segments addObject:[SBSegment segmentWithUUID:item[@"UUID"] ?: @""
                                                               category:item[@"category"] ?: @""
                                                                  start:[seg[0] floatValue]
                                                                    end:[seg[1] floatValue]
@@ -117,14 +133,11 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
         dispatch_async(dispatch_get_main_queue(), ^{
             @synchronized(sbSegmentCache) {
                 sbSegmentCache[videoID] = segments;
-                while (sbSegmentCache.count > 50)
-                    [sbSegmentCache removeObjectForKey:sbSegmentCache.allKeys.firstObject];
             }
             if (completion) completion(segments);
         });
     }] resume];
 }
-
 @end
 
 %hook YTPlayerViewController
@@ -170,7 +183,6 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
     self.sbSkippedSegments = [NSMutableSet set];
     self.sbSegments        = nil;
     [self.sbNotificationView dismiss];
-
     __weak typeof(self) weakSelf = self;
     [SBRequest fetchSegmentsForVideoID:videoID completion:^(NSArray<SBSegment *> *segments) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
@@ -185,19 +197,14 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 %new
 - (void)sbHandleTimeChange {
     if (!IS_ENABLED(SBEnabled) || !self.sbEnabledForVideo || self.isPlayingAd) return;
-
     CGFloat currentTime = [self currentVideoMediaTime];
     float   minDuration = FLOAT_FOR_KEY(SBMinDuration);
-
     for (SBSegment *segment in self.sbSegments) {
         SBSegmentAction action = [segment configuredAction];
-        if (action == SBSegmentActionDisable ||
-            action == SBSegmentActionDisplay ||
-            action == SBSegmentActionSkipTo)  continue;
-        if (segment.endTime - segment.startTime < minDuration)        continue;
+        if (action == SBSegmentActionDisable || action == SBSegmentActionDisplay || action == SBSegmentActionSkipTo) continue;
+        if (segment.endTime - segment.startTime < minDuration) continue;
         if (currentTime < segment.startTime || currentTime >= segment.endTime - 0.5) continue;
-        if ([self.sbSkippedSegments containsObject:segment.UUID])     continue;
-
+        if ([self.sbSkippedSegments containsObject:segment.UUID]) continue;
         if (action == SBSegmentActionAutoSkip) [self sbPerformSkip:segment];
         else if (action == SBSegmentActionAsk) [self sbShowAskNotification:segment];
         break;
@@ -208,20 +215,14 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 - (void)sbPerformSkip:(SBSegment *)segment {
     [self.sbSkippedSegments addObject:segment.UUID];
     [self seekToTime:(CGFloat)segment.endTime];
-
     if (IS_ENABLED(SBAudioNotification)) AudioServicesPlaySystemSound(1519);
     if (!IS_ENABLED(SBShowNotifications)) return;
-
     float alertDuration = FLOAT_FOR_KEY(SBUnskipAlertDuration);
     if (alertDuration <= 0) alertDuration = 4.0;
-
-    NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped",
-                         SBLocalizedCategoryName(segment.category)];
+    NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped", SBLocalizedCategoryName(segment.category)];
     float startTime = segment.startTime;
-
     __weak typeof(self) weakSelf = self;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
-                   dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
         strongSelf.sbNotificationView = [SBSkipNotificationView
@@ -236,14 +237,10 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 %new
 - (void)sbShowAskNotification:(SBSegment *)segment {
     [self.sbSkippedSegments addObject:segment.UUID];
-
     float alertDuration = FLOAT_FOR_KEY(SBSkipAlertDuration);
     if (alertDuration <= 0) alertDuration = 4.0;
-
-    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip?",
-                         SBLocalizedCategoryName(segment.category)];
+    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip?", SBLocalizedCategoryName(segment.category)];
     float endTime = segment.endTime;
-
     __weak typeof(self) weakSelf = self;
     self.sbNotificationView = [SBSkipNotificationView
         showInView:self.playerView
@@ -252,7 +249,6 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
             action:^{ __strong typeof(weakSelf) ss = weakSelf; if (ss) [ss seekToTime:(CGFloat)endTime]; }
           duration:alertDuration];
 }
-
 %end
 
 %ctor {
