@@ -38,14 +38,15 @@
 
     [parentView addSubview:view];
 
-    BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
-    CGFloat bottomOffset = isLandscape ? -80.0 : -150.0;
+    UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
+    BOOL isLandscape = UIInterfaceOrientationIsLandscape(orientation);
+    
+    CGFloat bottomOffset = isLandscape ? -70.0 : -30.0;
 
     [NSLayoutConstraint activateConstraints:@[
         [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
         [view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],
         [view.heightAnchor   constraintEqualToConstant:40.0],
-
         [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],
         [label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
         [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
