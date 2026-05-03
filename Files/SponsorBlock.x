@@ -215,7 +215,7 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 
     NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped",
                          SBLocalizedCategoryName(segment.category)];
-    float endTime = segment.endTime, startTime = segment.startTime;
+    float startTime = segment.startTime;
 
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
