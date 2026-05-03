@@ -266,7 +266,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     cell.detailTextLabel.textColor = [self sbSecondaryTextColor];
     cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
     cell.textLabel.text = @"Clear segment cache";
-    cell.detailTextLabel.text = [NSString stringWithFormat:@"Current cache size: %@", SBCacheSizeFormatted()];
+    cell.detailTextLabel.text = SBCacheSizeFormatted();
     return cell;
 }
 - (UITableViewCell *)segmentCellForRow:(NSInteger)row tableView:(UITableView *)tv {

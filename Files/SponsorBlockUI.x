@@ -2,86 +2,87 @@
 #import <objc/message.h>
 
 @implementation SBSkipNotificationView
+
 + (instancetype)showInView:(UIView *)parentView message:(NSString *)message
                buttonTitle:(NSString *)buttonTitle action:(void (^)(void))action
                   duration:(NSTimeInterval)duration {
     if (!parentView) return nil;
+
     for (UIView *sub in [parentView.subviews copy])
         if ([sub isKindOfClass:[SBSkipNotificationView class]])
             [(SBSkipNotificationView *)sub dismiss];
+
     SBSkipNotificationView *view = [[SBSkipNotificationView alloc] initWithFrame:CGRectZero];
     view.translatesAutoresizingMaskIntoConstraints = NO;
-    view.backgroundColor     = [UIColor colorWithWhite:0.0 alpha:0.85];
-    view.layer.cornerRadius  = 12.0;
+    view.backgroundColor     = [UIColor colorWithWhite:0.0 alpha:0.9];
+    view.layer.cornerRadius  = 20.0;
     view.layer.shadowColor   = [UIColor blackColor].CGColor;
-    view.layer.shadowOffset  = CGSizeMake(0, 2);
-    view.layer.shadowRadius  = 8.0;
-    view.layer.shadowOpacity = 0.4;
-    view.clipsToBounds       = NO;
+    view.layer.shadowOffset  = CGSizeMake(0, 4);
+    view.layer.shadowRadius  = 10.0;
+    view.layer.shadowOpacity = 0.5;
     view.onAction            = action;
+
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.translatesAutoresizingMaskIntoConstraints = NO;
     label.text          = message;
     label.textColor     = [UIColor whiteColor];
-    label.font          = [UIFont systemFontOfSize:15.0 weight:UIFontWeightMedium];
-    label.numberOfLines = 2;
-    label.lineBreakMode = NSLineBreakByTruncatingTail;
+    label.font          = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+    label.numberOfLines = 1;
     view.messageLabel   = label;
     [view addSubview:label];
-    NSString *iconName = ([buttonTitle.lowercaseString containsString:@"unskip"] ||
-                          [buttonTitle.lowercaseString containsString:@"back"])
-                         ? @"backward.end.fill" : @"forward.end.fill";
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
     button.translatesAutoresizingMaskIntoConstraints = NO;
-    [button setImage:[UIImage systemImageNamed:iconName
-                             withConfiguration:[UIImageSymbolConfiguration
-                                 configurationWithPointSize:16 weight:UIImageSymbolWeightMedium]]
-            forState:UIControlStateNormal];
-    button.tintColor          = [UIColor whiteColor];
-    button.backgroundColor    = [UIColor colorWithWhite:1.0 alpha:0.15];
-    button.layer.cornerRadius = 18.0;
-    button.clipsToBounds      = YES;
+    
+    NSString *displayTitle = [buttonTitle.lowercaseString containsString:@"unskip"] ? @"Go back" : buttonTitle;
+    [button setTitle:displayTitle forState:UIControlStateNormal];
+    [button setTitleColor:[UIColor colorWithRed:0.4 green:0.7 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
+    button.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightBold];
     [button addTarget:view action:@selector(actionButtonTapped) forControlEvents:UIControlEventTouchUpInside];
     view.actionButton = button;
     [view addSubview:button];
+
     [parentView addSubview:view];
+
     [NSLayoutConstraint activateConstraints:@[
-        [view.leadingAnchor  constraintEqualToAnchor:parentView.leadingAnchor  constant:16.0],
-        [view.trailingAnchor constraintEqualToAnchor:parentView.trailingAnchor constant:-16.0],
-        [view.bottomAnchor   constraintEqualToAnchor:parentView.bottomAnchor   constant:-80.0],
-        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:16.0],
-        [label.topAnchor      constraintEqualToAnchor:view.topAnchor        constant:12.0],
-        [label.bottomAnchor   constraintEqualToAnchor:view.bottomAnchor     constant:-12.0],
-        [label.trailingAnchor constraintEqualToAnchor:button.leadingAnchor  constant:-12.0],
-        [button.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:-12.0],
-        [button.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor],
-        [button.widthAnchor    constraintEqualToConstant:36.0],
-        [button.heightAnchor   constraintEqualToConstant:36.0],
+        [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
+        [view.bottomAnchor   constraintEqualToAnchor:parentView.bottomAnchor   constant:-85.0],
+        [view.widthAnchor    constraintLessThanOrEqualToAnchor:parentView.widthAnchor constant:-40.0],
+        [view.heightAnchor   constraintEqualToConstant:40.0],
+
+        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:18.0],
+        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor],
+
+        [button.leadingAnchor constraintEqualToAnchor:label.trailingAnchor  constant:12.0],
+        [button.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:-18.0],
+        [button.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
     ]];
-    UISwipeGestureRecognizer *swipe = [[UISwipeGestureRecognizer alloc] initWithTarget:view action:@selector(dismiss)];
-    swipe.direction = UISwipeGestureRecognizerDirectionDown;
-    [view addGestureRecognizer:swipe];
+
     view.alpha     = 0.0;
-    view.transform = CGAffineTransformMakeTranslation(0, 10);
-    [UIView animateWithDuration:0.25 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+    view.transform = CGAffineTransformMakeScale(0.9, 0.9);
+    [UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:0 animations:^{
         view.alpha     = 1.0;
         view.transform = CGAffineTransformIdentity;
     } completion:nil];
+
     if (duration > 0)
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{ [view dismiss]; });
     return view;
 }
+
 - (void)actionButtonTapped {
     if (self.onAction) self.onAction();
     [self dismiss];
 }
+
 - (void)dismiss {
-    [UIView animateWithDuration:0.2 delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+    [UIView animateWithDuration:0.2 animations:^{
         self.alpha     = 0.0;
-        self.transform = CGAffineTransformMakeTranslation(0, 10);
+        self.transform = CGAffineTransformMakeScale(0.9, 0.9);
     } completion:^(BOOL _) { [self removeFromSuperview]; }];
 }
+
 @end
 
 static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *container) {
