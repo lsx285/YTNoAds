@@ -146,6 +146,7 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 %property (nonatomic, strong) NSMutableSet           *sbSkippedSegments;
 %property (nonatomic, strong) SBSkipNotificationView *sbNotificationView;
 %property (nonatomic, assign) BOOL                    sbEnabledForVideo;
+%property (nonatomic, assign) CGFloat                 sbLastSeenTime;
 
 - (void)setContentVideoID:(NSString *)videoID {
     %orig;
@@ -181,6 +182,7 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 - (void)sbLoadSegmentsForVideoID:(NSString *)videoID {
     self.sbEnabledForVideo = YES;
     self.sbSkippedSegments = [NSMutableSet set];
+    self.sbLastSeenTime    = 0;
     self.sbSegments        = nil;
     [self.sbNotificationView dismiss];
     __weak typeof(self) weakSelf = self;
@@ -197,8 +199,15 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 %new
 - (void)sbHandleTimeChange {
     if (!IS_ENABLED(SBEnabled) || !self.sbEnabledForVideo || self.isPlayingAd) return;
+    
     CGFloat currentTime = [self currentVideoMediaTime];
-    float   minDuration = FLOAT_FOR_KEY(SBMinDuration);
+
+    if (currentTime < self.sbLastSeenTime - 2.0) {
+        [self.sbSkippedSegments removeAllObjects];
+    }
+    self.sbLastSeenTime = currentTime;
+
+    float minDuration = FLOAT_FOR_KEY(SBMinDuration);
     for (SBSegment *segment in self.sbSegments) {
         SBSegmentAction action = [segment configuredAction];
         if (action == SBSegmentActionDisable || action == SBSegmentActionDisplay || action == SBSegmentActionSkipTo) continue;
