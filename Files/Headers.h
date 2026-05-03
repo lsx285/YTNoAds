@@ -105,6 +105,7 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, strong) NSMutableSet<NSString *> *sbSkippedSegments;
 @property (nonatomic, strong) SBSkipNotificationView *sbNotificationView;
 @property (nonatomic, assign) BOOL sbEnabledForVideo;
+@property (nonatomic, assign) CGFloat sbLastSeenTime;
 - (void)sbPerformSkip:(SBSegment *)segment;
 - (void)sbShowAskNotification:(SBSegment *)segment;
 @end
