@@ -118,7 +118,6 @@ UIColor *SBColorFromHex(NSString *hex) {
 %property (nonatomic, assign) CGFloat                 sbMinDuration;
 %property (nonatomic, assign) BOOL                    sbHapticFeedback;
 %property (nonatomic, assign) BOOL                    sbShowNotifications;
-%property (nonatomic, assign) BOOL                    sbSnappingEnabled;
 %property (nonatomic, assign) CGFloat                 sbSkipAlertDuration;
 %property (nonatomic, assign) CGFloat                 sbUnskipAlertDuration;
 
@@ -163,7 +162,6 @@ UIColor *SBColorFromHex(NSString *hex) {
     self.sbMinDuration = FLOAT_FOR_KEY(SBMinDuration);
     self.sbHapticFeedback = IS_ENABLED(SBHapticFeedback);
     self.sbShowNotifications = IS_ENABLED(SBShowNotifications);
-    self.sbSnappingEnabled = IS_ENABLED(SBSnappingEnabled);
     self.sbSkipAlertDuration = FLOAT_FOR_KEY(SBSkipAlertDuration) > 0 ? FLOAT_FOR_KEY(SBSkipAlertDuration) : 4.0;
     self.sbUnskipAlertDuration = FLOAT_FOR_KEY(SBUnskipAlertDuration) > 0 ? FLOAT_FOR_KEY(SBUnskipAlertDuration) : 4.0;
     [self.sbNotificationView dismiss];
@@ -192,27 +190,6 @@ UIColor *SBColorFromHex(NSString *hex) {
         [self.sbSkippedSegments removeAllObjects];
     }
     
-    if (isManualSeek && self.sbSnappingEnabled) {
-        for (SBSegment *segment in self.sbSegments) {
-            if (segment.action == SBSegmentActionDisable) continue;
-            
-            CGFloat snapTolerance = 2.5;
-
-            if (fabs(currentTime - segment.startTime) < snapTolerance && fabs(currentTime - segment.startTime) > 0.1) {
-                if (self.sbHapticFeedback) AudioServicesPlaySystemSound(SB_HAPTIC_SOUND_ID);
-                self.sbLastSeenTime = segment.startTime;
-                [self seekToTime:segment.startTime];
-                return;
-            }
-            if (fabs(currentTime - segment.endTime) < snapTolerance && fabs(currentTime - segment.endTime) > 0.1) {
-                if (self.sbHapticFeedback) AudioServicesPlaySystemSound(SB_HAPTIC_SOUND_ID);
-                self.sbLastSeenTime = segment.endTime;
-                [self seekToTime:segment.endTime];
-                return;
-            }
-        }
-    }
-
     self.sbLastSeenTime = currentTime;
 
     for (SBSegment *segment in self.sbSegments) {

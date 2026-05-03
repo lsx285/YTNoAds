@@ -103,7 +103,6 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
 static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
     UIView *referenceView = nil;
     for (UIView *sub in playerBar.subviews) {
-        // Look for the actual "track" of the seekbar
         if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)] ||
             [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) {
             referenceView = sub;
@@ -111,10 +110,8 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
         }
     }
 
-    // Determine the height of the markers
     CGFloat markerHeight = MAX(SB_MARKER_HEIGHT_MIN, referenceView ? referenceView.frame.size.height : SB_MARKER_HEIGHT_DEFAULT);
     
-    // Logic Fix: Calculate markerY to be centered vertically on the referenceView
     CGFloat markerY;
     if (referenceView) {
         markerY = referenceView.frame.origin.y + (referenceView.frame.size.height - markerHeight) / 2.0;
@@ -149,11 +146,7 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
     CGFloat barWidth = playerBar.bounds.size.width;
     if (barWidth <= 0) return;
     
-    // Performance guard: only update if width actually changed
-    NSNumber *lastWidth = objc_getAssociatedObject(self, @selector(layoutSubviews));
-    if (lastWidth && [lastWidth floatValue] == barWidth) return;
     objc_setAssociatedObject(self, @selector(layoutSubviews), @(barWidth), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
     sbUpdateMarkerFrames(playerBar, barWidth);
 }
 %end
@@ -187,7 +180,6 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
         
         UIView *playerBar = sbPlayerBarFromContainer(containerView);
         
-        // Use optimized reverse loop to clear old markers
         NSArray *barSubviews = playerBar.subviews;
         for (NSInteger i = barSubviews.count - 1; i >= 0; i--) {
             UIView *sub = barSubviews[i];
@@ -200,7 +192,7 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
 
         CGFloat totalTime = [self currentVideoTotalMediaTime];
         CGFloat barWidth  = playerBar.bounds.size.width;
-        if (totalTime <= 0 || barWidth <= 0) return;
+        if (totalTime <= 0) return;
 
         UIView *referenceView = nil, *scrubberView = nil;
         for (UIView *sub in playerBar.subviews) {
@@ -233,9 +225,9 @@ static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
             }
         }
         
-        sbUpdateMarkerFrames(playerBar, barWidth);
+        [containerView setNeedsLayout];
+        [containerView layoutIfNeeded];
         
-        // Ensure the scrubber dot stays on top of our markers
         if (scrubberView) {
             [playerBar bringSubviewToFront:scrubberView.superview ?: scrubberView];
         }

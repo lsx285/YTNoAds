@@ -100,7 +100,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)section {
-    if (section == 0) return 7;
+    if (section == 0) return 6;
     if (section == 1) return 3;
     if (section == 3) return 1;
     return (NSInteger)SBAllCategories().count * 2;
@@ -142,7 +142,6 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
             @{@"title": @"Segments in feed",           @"desc": @"Show colored segments on feed player progress bars.",        @"key": SBSegmentsInFeed},
             @{@"title": @"Segments in mini-player",    @"desc": @"Show colored segments on the mini-player progress bar.",     @"key": SBSegmentsInMiniPlayer},
             @{@"title": @"Haptic feedback",            @"desc": @"Vibrate when a segment is skipped.",                         @"key": SBHapticFeedback},
-            @{@"title": @"Enable snapping",            @"desc": @"Snap to segment boundaries when seeking.",                   @"key": SBSnappingEnabled},
             @{@"title": @"Show duration without ads",  @"desc": @"Show video length excluding skippable segments.",            @"key": SBShowDuration},
         ];
     });
@@ -347,7 +346,6 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
         SBHapticFeedback:       @NO,
         SBSegmentsInFeed:       @NO,
         SBSegmentsInMiniPlayer: @YES,
-        SBSnappingEnabled:      @YES,
         SBShowDuration:         @NO,
         SBSkipAlertDuration:    @4.0,
         SBUnskipAlertDuration:  @4.0,
