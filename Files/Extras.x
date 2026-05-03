@@ -19,14 +19,15 @@
 %hook YTPivotBarView
 - (void)setRenderer:(YTIPivotBarRenderer *)renderer {
     NSMutableArray *items = [renderer itemsArray];
-    [items removeObjectsAtIndexes:[items indexesOfObjectsPassingTest:^BOOL(YTIPivotBarSupportedRenderers *item, NSUInteger idx, BOOL *stop) {
-        return [[item pivotBarIconOnlyItemRenderer].pivotIdentifier isEqualToString:@"FEuploads"];
-    }]];
+    for (NSInteger i = items.count - 1; i >= 0; i--) {
+        if ([[[items objectAtIndex:i] pivotBarIconOnlyItemRenderer].pivotIdentifier isEqualToString:@"FEuploads"]) {
+            [items removeObjectAtIndex:i];
+        }
+    }
     %orig(renderer);
 }
 %end
 
-// Always show Shorts seekbar
 %hook YTShortsPlayerViewController
 - (BOOL)shouldAlwaysEnablePlayerBar { return YES; }
 - (BOOL)shouldEnablePlayerBarOnlyOnPause { return NO; }
