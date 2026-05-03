@@ -38,19 +38,7 @@
 
     [parentView addSubview:view];
 
-    UIWindow *window = parentView.window ?: [UIApplication sharedApplication].keyWindow;
-    BOOL isLandscape = NO;
-    if (@available(iOS 13.0, *)) {
-        if (window.windowScene) {
-            isLandscape = UIInterfaceOrientationIsLandscape(window.windowScene.interfaceOrientation);
-        }
-    }
-
-    if (!isLandscape) {
-        CGSize screenSize = [UIScreen mainScreen].bounds.size;
-        isLandscape = screenSize.width > screenSize.height;
-    }
-
+    BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
     CGFloat bottomOffset = isLandscape ? -70.0 : -30.0;
 
     [NSLayoutConstraint activateConstraints:@[
