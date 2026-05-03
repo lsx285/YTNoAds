@@ -28,7 +28,7 @@ static NSString *SBHexFromColor(UIColor *color) {
 
 #define SB_SUPER_BOOL(sel, val) \
     do { \
-        Class _base = objc_getClass("YTStyledViewController") ?: [UIViewController class]; \
+        Class _base = objc_getClass("YTStyledViewController") ?:[UIViewController class]; \
         struct objc_super _sup = { self, _base }; \
         ((void (*)(struct objc_super *, SEL, BOOL))objc_msgSendSuper)(&_sup, @selector(sel), val); \
     } while (0)
@@ -57,8 +57,7 @@ static NSString *SBHexFromColor(UIColor *color) {
         CGContextSetLineWidth(ctx, ringW);
         CGContextAddArc(ctx, cx, cy, radius, start, start + step + 0.02, 0);
         CGContextStrokePath(ctx);
-    }
-    [self.fillColor setFill];
+    }[self.fillColor setFill];
     [[UIBezierPath bezierPathWithOvalInRect:CGRectInset(sq, ringW + 2, ringW + 2)] fill];
 }
 - (void)setFillColor:(UIColor *)fillColor {
@@ -101,7 +100,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)section {
-    if (section == 0) return 6;
+    if (section == 0) return 7;
     if (section == 1) return 3;
     if (section == 3) return 1;
     return (NSInteger)SBAllCategories().count * 2;
@@ -114,8 +113,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     label.text = title;
     label.textColor =[UIColor colorWithWhite:0.6 alpha:1.0];
     label.font =[UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
-    label.translatesAutoresizingMaskIntoConstraints = NO;[header addSubview:label];
-    [NSLayoutConstraint activateConstraints:@[[label.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],[label.bottomAnchor  constraintEqualToAnchor:header.bottomAnchor  constant:-6],
+    label.translatesAutoresizingMaskIntoConstraints = NO;[header addSubview:label];[NSLayoutConstraint activateConstraints:@[[label.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16],[label.bottomAnchor  constraintEqualToAnchor:header.bottomAnchor  constant:-6],
     ]];
     return header;
 }
@@ -132,7 +130,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     if (indexPath.section == 0) return[self toggleCellForRow:indexPath.row tableView:tv];
     if (indexPath.section == 1) return[self sliderCellForRow:indexPath.row tableView:tv];
     if (indexPath.section == 3) return[self cacheCellWithTableView:tv];
-    return [self segmentCellForRow:indexPath.row tableView:tv];
+    return[self segmentCellForRow:indexPath.row tableView:tv];
 }
 static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     static NSArray *defs;
@@ -144,6 +142,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
             @{@"title": @"Segments in feed",           @"desc": @"Show colored segments on feed player progress bars.",        @"key": SBSegmentsInFeed},
             @{@"title": @"Segments in mini-player",    @"desc": @"Show colored segments on the mini-player progress bar.",     @"key": SBSegmentsInMiniPlayer},
             @{@"title": @"Haptic feedback",            @"desc": @"Vibrate when a segment is skipped.",                         @"key": SBHapticFeedback},
+            @{@"title": @"Enable snapping",            @"desc": @"Snap to segment boundaries when seeking.",                   @"key": SBSnappingEnabled},
             @{@"title": @"Show duration without ads",  @"desc": @"Show video length excluding skippable segments.",            @"key": SBShowDuration},
         ];
     });
@@ -174,7 +173,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
 }
 - (UITableViewCell *)sliderCellForRow:(NSInteger)row tableView:(UITableView *)tv {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.backgroundColor = [UIColor clearColor];
+    cell.backgroundColor =[UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
     NSString *title, *key, *unit;
@@ -215,8 +214,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     valueLabel.textAlignment = NSTextAlignmentRight;
     valueLabel.translatesAutoresizingMaskIntoConstraints = NO;
     valueLabel.tag = 100 + row;[cell.contentView addSubview:titleLabel];[cell.contentView addSubview:slider];[cell.contentView addSubview:valueLabel];[NSLayoutConstraint activateConstraints:@[[titleLabel.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:8],[titleLabel.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],[slider.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:8],[slider.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],[slider.trailingAnchor constraintEqualToAnchor:valueLabel.leadingAnchor constant:-8],
-        [slider.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-8],
-        [valueLabel.centerYAnchor constraintEqualToAnchor:slider.centerYAnchor],[valueLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],[valueLabel.widthAnchor constraintEqualToConstant:56],
+        [slider.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-8],[valueLabel.centerYAnchor constraintEqualToAnchor:slider.centerYAnchor],[valueLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],[valueLabel.widthAnchor constraintEqualToConstant:56],
     ]];
     return cell;
 }
@@ -256,13 +254,11 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     cell.textLabel.textColor =[self sbTextColor];
     cell.textLabel.font =[UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
     NSString  *actionKey = SB_ACTION_KEY(category);
-    BOOL       isHighlight = [category isEqualToString:@"poi_highlight"];
+    BOOL       isHighlight =[category isEqualToString:@"poi_highlight"];
     NSInteger  currentAction = [[NSUserDefaults standardUserDefaults] integerForKey:actionKey];
-    UIButton *menuBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    [menuBtn setTitle:SBActionLabel(currentAction) forState:UIControlStateNormal];[menuBtn setTitleColor:[self sbSecondaryTextColor] forState:UIControlStateNormal];
+    UIButton *menuBtn = [UIButton buttonWithType:UIButtonTypeSystem];[menuBtn setTitle:SBActionLabel(currentAction) forState:UIControlStateNormal];[menuBtn setTitleColor:[self sbSecondaryTextColor] forState:UIControlStateNormal];
     menuBtn.titleLabel.font =[UIFont systemFontOfSize:15];
-    menuBtn.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
-    [menuBtn setImage:[UIImage systemImageNamed:@"chevron.up.chevron.down"] forState:UIControlStateNormal];
+    menuBtn.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;[menuBtn setImage:[UIImage systemImageNamed:@"chevron.up.chevron.down"] forState:UIControlStateNormal];
     menuBtn.tintColor = [self sbSecondaryTextColor];
     NSArray *actionDefs = isHighlight
         ? @[@[@(SBSegmentActionDisable), @"Disabled"], @[@(SBSegmentActionSkipTo), @"Skip to"], @[@(SBSegmentActionDisplay), @"Show on bar"]]
@@ -351,6 +347,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
         SBHapticFeedback:       @NO,
         SBSegmentsInFeed:       @NO,
         SBSegmentsInMiniPlayer: @YES,
+        SBSnappingEnabled:      @YES,
         SBShowDuration:         @NO,
         SBSkipAlertDuration:    @4.0,
         SBUnskipAlertDuration:  @4.0,
