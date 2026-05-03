@@ -20,8 +20,7 @@ static const NSInteger SBSection = 'ytsb';
 + (NSArray<NSNumber *> *)settingsCategoryOrder {
     NSMutableArray<NSNumber *> *order =[%orig mutableCopy];
     NSUInteger idx = [order indexOfObject:@(1)];
-    if (idx != NSNotFound)
-        [order insertObject:@(SBSection) atIndex:idx + 1];
+    if (idx != NSNotFound)[order insertObject:@(SBSection) atIndex:idx + 1];
     return[order copy];
 }
 %end
@@ -42,7 +41,7 @@ static const NSInteger SBSection = 'ytsb';
         selectBlock:^BOOL(YTSettingsCell *cell, NSUInteger arg1) {
             Class sbClass = objc_getClass("SBSettingsViewControllerStyled");
             UIViewController *sbVC;
-            if (sbClass && [sbClass instancesRespondToSelector:@selector(initWithParentResponder:)]) {
+            if (sbClass &&[sbClass instancesRespondToSelector:@selector(initWithParentResponder:)]) {
                 sbVC = ((id (*)(id, SEL, id))objc_msgSend)([sbClass alloc], @selector(initWithParentResponder:), settingsVC);
             } else {
                 sbVC = [[SBSettingsViewController alloc] init];
@@ -55,7 +54,7 @@ static const NSInteger SBSection = 'ytsb';
     icon.iconType = 530;
     sbRow.settingIcon = icon;
 
-    NSMutableArray<YTSettingsSectionItem *> *items = [NSMutableArray arrayWithObject:sbRow];
+    NSMutableArray<YTSettingsSectionItem *> *items =[NSMutableArray arrayWithObject:sbRow];
 
     if ([settingsVC respondsToSelector:
             @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)])[settingsVC setSectionItems:items forCategory:SBSection title:@"SponsorBlock"

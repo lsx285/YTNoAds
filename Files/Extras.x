@@ -18,7 +18,7 @@
 
 %hook YTPivotBarView
 - (void)setRenderer:(YTIPivotBarRenderer *)renderer {
-    NSMutableArray *items = [renderer itemsArray];
+    NSMutableArray *items =[renderer itemsArray];
     for (NSInteger i = items.count - 1; i >= 0; i--) {
         if ([[[items objectAtIndex:i] pivotBarIconOnlyItemRenderer].pivotIdentifier isEqualToString:@"FEuploads"]) {
             [items removeObjectAtIndex:i];

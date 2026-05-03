@@ -1,4 +1,5 @@
-#import "Headers.h"
+#import <Foundation/Foundation.h>
+#import <Security/Security.h>
 
 #define YT_BUNDLE_ID @"com.google.ios.youtube"
 #define YT_NAME      @"YouTube"

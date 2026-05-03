@@ -17,12 +17,17 @@
                   duration:(NSTimeInterval)duration {
     if (!parentView) return nil;
 
-    for (UIView *sub in[parentView.subviews copy])
-        if ([sub isKindOfClass:[SBSkipNotificationView class]])[(SBSkipNotificationView *)sub dismiss];
+    NSArray *subviews = parentView.subviews;
+    for (NSInteger i = subviews.count - 1; i >= 0; i--) {
+        UIView *sub = subviews[i];
+        if ([sub isKindOfClass:[SBSkipNotificationView class]]) {
+            [(SBSkipNotificationView *)sub dismiss];
+        }
+    }
 
     SBSkipNotificationView *view = [[SBSkipNotificationView alloc] initWithFrame:CGRectZero];
     view.translatesAutoresizingMaskIntoConstraints = NO;
-    view.backgroundColor     =[UIColor colorWithWhite:0.0 alpha:0.9];
+    view.backgroundColor     = [UIColor colorWithWhite:0.0 alpha:0.9];
     view.layer.cornerRadius  = 20.0;
     view.layer.shadowColor   = [UIColor blackColor].CGColor;
     view.layer.shadowOffset  = CGSizeMake(0, 4);
@@ -31,13 +36,14 @@
     view.userInteractionEnabled = YES;
     view.onAction            = action;
 
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];[view addGestureRecognizer:tap];
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];
+    [view addGestureRecognizer:tap];
 
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.translatesAutoresizingMaskIntoConstraints = NO;
     label.text          = message;
     label.textColor     = [UIColor whiteColor];
-    label.font          =[UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+    label.font          = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
     label.numberOfLines = 1;
     label.textAlignment = NSTextAlignmentCenter;
     view.messageLabel   = label;
@@ -46,10 +52,8 @@
     [parentView addSubview:view];
 
     BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
-    CGFloat bottomOffset = isLandscape ? -30.0 : -70.0;
-
-    [NSLayoutConstraint activateConstraints:@[[view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],[view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],[view.heightAnchor   constraintEqualToConstant:40.0],[label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],[label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
-        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
+    CGFloat bottomOffset = isLandscape ? -30.0 : -70.0;[NSLayoutConstraint activateConstraints:@[
+        [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],[view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],[view.heightAnchor   constraintEqualToConstant:40.0],[label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],[label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],[label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
     ]];
 
     view.alpha     = 0.0;
@@ -72,7 +76,7 @@
 - (void)dismiss {[UIView animateWithDuration:0.2 animations:^{
         self.alpha     = 0.0;
         self.transform = CGAffineTransformMakeScale(0.9, 0.9);
-    } completion:^(BOOL _) { [self removeFromSuperview]; }];
+    } completion:^(BOOL _) {[self removeFromSuperview]; }];
 }
 
 @end
@@ -80,11 +84,33 @@
 static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *container) {
     if ([container respondsToSelector:@selector(modularPlayerBar)]) {
         id modular = container.modularPlayerBar;
-        if ([modular respondsToSelector:@selector(view)]) return [modular view];
+        if ([modular respondsToSelector:@selector(view)]) return[modular view];
     }
     if ([container respondsToSelector:@selector(segmentablePlayerBar)])
         return (UIView *)container.segmentablePlayerBar;
     return container;
+}
+
+static void sbUpdateMarkerFrames(UIView *playerBar, CGFloat barWidth) {
+    UIView *referenceView = nil;
+    for (UIView *sub in playerBar.subviews) {
+        if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)] ||
+            [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) {
+            referenceView = sub;
+            break;
+        }
+    }
+    CGFloat markerY = referenceView ? referenceView.frame.origin.y : (playerBar.bounds.size.height - SB_MARKER_HEIGHT_DEFAULT);
+    CGFloat markerHeight = MAX(SB_MARKER_HEIGHT_MIN, referenceView ? referenceView.frame.size.height : SB_MARKER_HEIGHT_DEFAULT);
+    for (UIView *sub in playerBar.subviews) {
+        if (![sub isKindOfClass:[SBSegmentMarkerView class]]) continue;
+        SBSegmentMarkerView *marker = (SBSegmentMarkerView *)sub;
+        CGFloat x = marker.startFrac * barWidth;
+        CGFloat w = (marker.endFrac - marker.startFrac) * barWidth;
+        if (marker.isPoi) { w = SB_POI_WIDTH; x = MAX(0, x - (SB_POI_WIDTH / 2.0)); }
+        else w = MAX(SB_MARKER_HEIGHT_MIN, w);
+        marker.frame = CGRectMake(x, markerY, w, markerHeight);
+    }
 }
 
 %hook YTInlinePlayerBarContainerView
@@ -94,25 +120,12 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
     if (!playerBar) return;
     CGFloat barWidth = playerBar.bounds.size.width;
     if (barWidth <= 0) return;
-    UIView *referenceView = nil;
-    for (UIView *sub in playerBar.subviews) {
-        if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)] ||
-            [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)]) {
-            referenceView = sub;
-            break;
-        }
-    }
-    CGFloat markerY      = referenceView ? referenceView.frame.origin.y : (playerBar.bounds.size.height - 3.0);
-    CGFloat markerHeight = MAX(2.0, referenceView ? referenceView.frame.size.height : 3.0);
-    for (UIView *sub in playerBar.subviews) {
-        if (![sub isKindOfClass:[SBSegmentMarkerView class]]) continue;
-        SBSegmentMarkerView *marker = (SBSegmentMarkerView *)sub;
-        CGFloat x = marker.startFrac * barWidth;
-        CGFloat w = (marker.endFrac - marker.startFrac) * barWidth;
-        if (marker.isPoi) { w = 3.0; x = MAX(0, x - 1.5); }
-        else w = MAX(2.0, w);
-        marker.frame = CGRectMake(x, markerY, w, markerHeight);
-    }
+    
+    NSNumber *lastWidth = objc_getAssociatedObject(self, @selector(layoutSubviews));
+    if (lastWidth &&[lastWidth floatValue] == barWidth) return;
+    objc_setAssociatedObject(self, @selector(layoutSubviews), @(barWidth), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
+    sbUpdateMarkerFrames(playerBar, barWidth);
 }
 %end
 
@@ -134,14 +147,21 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
 - (void)sbSegmentsDidLoad:(NSNotification *)notification {
     @try {
         NSArray<SBSegment *> *segments = notification.userInfo[@"segments"];
-        id overlay =[self activeVideoPlayerOverlay];
+        id overlay = [self activeVideoPlayerOverlay];
         if (!overlay || ![overlay respondsToSelector:@selector(playerBarController)]) return;
         YTPlayerBarController *barController = [overlay playerBarController];
         YTInlinePlayerBarContainerView *containerView = barController.playerBar;
         if (!containerView) return;
         UIView *playerBar = sbPlayerBarFromContainer(containerView);
-        for (UIView *sub in[playerBar.subviews copy])
-            if ([sub isKindOfClass:[SBSegmentMarkerView class]]) [sub removeFromSuperview];
+        
+        NSArray *barSubviews = playerBar.subviews;
+        for (NSInteger i = barSubviews.count - 1; i >= 0; i--) {
+            UIView *sub = barSubviews[i];
+            if ([sub isKindOfClass:[SBSegmentMarkerView class]]) {
+                [sub removeFromSuperview];
+            }
+        }
+        
         if (!segments.count) return;
         CGFloat totalTime = [self currentVideoTotalMediaTime];
         CGFloat barWidth  = playerBar.bounds.size.width;
@@ -150,23 +170,17 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
         for (UIView *sub in playerBar.subviews) {
             if ([sub isKindOfClass:%c(YTPlayerBarRectangleDecorationView)])
                 referenceView = sub;
-            else if (!referenceView &&[sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)])
+            else if (!referenceView && [sub isKindOfClass:%c(YTPlayerBarProgressDecorationView)])
                 referenceView = sub;
             else if ([sub isKindOfClass:%c(YTPlayerBarScrubberDotDecorationView)])
                 scrubberView = sub;
         }
-        CGFloat markerY      = referenceView ? referenceView.frame.origin.y : (playerBar.bounds.size.height - 3.0);
-        CGFloat markerHeight = MAX(2.0, referenceView ? referenceView.frame.size.height : 3.0);
         for (SBSegment *segment in segments) {
             if (segment.action == SBSegmentActionDisable) continue;
             CGFloat startFrac = segment.startTime / totalTime;
             CGFloat endFrac   = segment.endTime   / totalTime;
-            BOOL    isPoi     = [segment.category isEqualToString:@"poi_highlight"];
-            CGFloat x = startFrac * barWidth;
-            CGFloat w = (endFrac - startFrac) * barWidth;
-            if (isPoi) { w = 3.0; x = MAX(0, x - 1.5); }
-            else w = MAX(2.0, w);
-            SBSegmentMarkerView *marker = [[SBSegmentMarkerView alloc] initWithFrame:CGRectMake(x, markerY, w, markerHeight)];
+            BOOL    isPoi     =[segment.category isEqualToString:@"poi_highlight"];
+            SBSegmentMarkerView *marker = [[SBSegmentMarkerView alloc] initWithFrame:CGRectZero];
             marker.backgroundColor        = segment.color;
             marker.userInteractionEnabled = NO;
             marker.startFrac              = startFrac;
@@ -175,6 +189,7 @@ static UIView *sbPlayerBarFromContainer(YTInlinePlayerBarContainerView *containe
             if (referenceView)[playerBar insertSubview:marker aboveSubview:referenceView];
             else               [playerBar addSubview:marker];
         }
+        sbUpdateMarkerFrames(playerBar, barWidth);
         if (scrubberView)[playerBar bringSubviewToFront:scrubberView.superview ?: scrubberView];
     } @catch (NSException *e) {}
 }

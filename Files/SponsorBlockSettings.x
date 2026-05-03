@@ -4,25 +4,6 @@
 
 extern UIColor *SBColorFromHex(NSString *hexString);
 
-static NSString *SBCategoryName(NSString *category) {
-    static NSDictionary *names;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        names = @{
-            @"sponsor":        @"Sponsor",
-            @"intro":          @"Intro / Intermission",
-            @"outro":          @"Endcards / Credits",
-            @"interaction":    @"Interaction Reminder",
-            @"selfpromo":      @"Unpaid Self-promotion",
-            @"music_offtopic": @"Non-music Section",
-            @"preview":        @"Preview / Recap",
-            @"poi_highlight":  @"Highlight",
-            @"filler":         @"Filler Tangent",
-        };
-    });
-    return names[category] ?: category;
-}
-
 static NSString *SBActionLabel(NSInteger action) {
     switch (action) {
         case SBSegmentActionAutoSkip: return @"Auto-skip";
@@ -59,7 +40,7 @@ static NSString *SBHexFromColor(UIColor *color) {
 
 @implementation SBColorCircleView
 - (instancetype)initWithFrame:(CGRect)frame color:(UIColor *)color {
-    self = [super initWithFrame:frame];
+    self =[super initWithFrame:frame];
     if (self) { _fillColor = color; self.backgroundColor = [UIColor clearColor]; }
     return self;
 }
@@ -100,7 +81,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
 - (NSIndexPath *)activeColorIndexPath { return objc_getAssociatedObject(self, kSBColorIdxKey); }
 - (void)setActiveColorIndexPath:(NSIndexPath *)ip { objc_setAssociatedObject(self, kSBColorIdxKey, ip, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
 - (UIColor *)sbTextColor { return (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) ? [UIColor whiteColor] : [UIColor labelColor]; }
-- (UIColor *)sbSecondaryTextColor { return [UIColor colorWithWhite:0.55 alpha:1.0]; }
+- (UIColor *)sbSecondaryTextColor { return[UIColor colorWithWhite:0.55 alpha:1.0]; }
 - (UIColor *)sbAccentColor { return[UIColor colorWithRed:0.6 green:0.2 blue:0.9 alpha:1.0]; }
 - (void)viewDidLoad {
     SB_SUPER_VOID(viewDidLoad);
@@ -112,8 +93,7 @@ static const void *kSBColorIdxKey = &kSBColorIdxKey;
     tv.separatorStyle = UITableViewCellSeparatorStyleNone;
     tv.estimatedRowHeight = 60;
     tv.rowHeight = UITableViewAutomaticDimension;
-    tv.backgroundColor = (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) ? [UIColor blackColor] : [UIColor systemBackgroundColor];[self.view addSubview:tv];
-    [self setSbTableView:tv];
+    tv.backgroundColor = (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) ?[UIColor blackColor] : [UIColor systemBackgroundColor];[self.view addSubview:tv];[self setSbTableView:tv];
 }
 - (void)viewWillAppear:(BOOL)animated {
     SB_SUPER_BOOL(viewWillAppear:, animated);
@@ -163,7 +143,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
             @{@"title": @"Show skip notifications",    @"desc": @"Show a banner when a segment is auto-skipped.",              @"key": SBShowNotifications},
             @{@"title": @"Segments in feed",           @"desc": @"Show colored segments on feed player progress bars.",        @"key": SBSegmentsInFeed},
             @{@"title": @"Segments in mini-player",    @"desc": @"Show colored segments on the mini-player progress bar.",     @"key": SBSegmentsInMiniPlayer},
-            @{@"title": @"Haptic feedback",            @"desc": @"Vibrate when a segment is skipped.",                         @"key": SBAudioNotification},
+            @{@"title": @"Haptic feedback",            @"desc": @"Vibrate when a segment is skipped.",                         @"key": SBHapticFeedback},
             @{@"title": @"Show duration without ads",  @"desc": @"Show video length excluding skippable segments.",            @"key": SBShowDuration},
         ];
     });
@@ -216,7 +196,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     UILabel *titleLabel = [[UILabel alloc] init];
     titleLabel.text = title;
     titleLabel.textColor = [self sbSecondaryTextColor];
-    titleLabel.font = [UIFont systemFontOfSize:13];
+    titleLabel.font =[UIFont systemFontOfSize:13];
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
     UISlider *slider = [[UISlider alloc] init];
@@ -229,14 +209,12 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     slider.tag = row;[slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
 
     UILabel *valueLabel = [[UILabel alloc] init];
-    valueLabel.text = [NSString stringWithFormat:@"%d %@", (int)cur, unit];
+    valueLabel.text =[NSString stringWithFormat:@"%d %@", (int)cur, unit];
     valueLabel.textColor =[self sbSecondaryTextColor];
     valueLabel.font = [UIFont systemFontOfSize:13];
     valueLabel.textAlignment = NSTextAlignmentRight;
     valueLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    valueLabel.tag = 100 + row;[cell.contentView addSubview:titleLabel];
-    [cell.contentView addSubview:slider];[cell.contentView addSubview:valueLabel];
-    [NSLayoutConstraint activateConstraints:@[[titleLabel.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:8],[titleLabel.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],[slider.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:8],[slider.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],[slider.trailingAnchor constraintEqualToAnchor:valueLabel.leadingAnchor constant:-8],
+    valueLabel.tag = 100 + row;[cell.contentView addSubview:titleLabel];[cell.contentView addSubview:slider];[cell.contentView addSubview:valueLabel];[NSLayoutConstraint activateConstraints:@[[titleLabel.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor constant:8],[titleLabel.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],[slider.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:8],[slider.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:16],[slider.trailingAnchor constraintEqualToAnchor:valueLabel.leadingAnchor constant:-8],
         [slider.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor constant:-8],
         [valueLabel.centerYAnchor constraintEqualToAnchor:slider.centerYAnchor],[valueLabel.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],[valueLabel.widthAnchor constraintEqualToConstant:56],
     ]];
@@ -275,7 +253,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.textLabel.text = catName;
-    cell.textLabel.textColor = [self sbTextColor];
+    cell.textLabel.textColor =[self sbTextColor];
     cell.textLabel.font =[UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
     NSString  *actionKey = SB_ACTION_KEY(category);
     BOOL       isHighlight = [category isEqualToString:@"poi_highlight"];
@@ -309,7 +287,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    cell.textLabel.text = [NSString stringWithFormat:@"%@ color", catName];
+    cell.textLabel.text =[NSString stringWithFormat:@"%@ color", catName];
     cell.textLabel.textColor = [self sbTextColor];
     cell.textLabel.font =[UIFont systemFontOfSize:15];
     NSString *hex = [[NSUserDefaults standardUserDefaults] stringForKey:SB_COLOR_KEY(category)];
@@ -324,15 +302,13 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     }
     if (indexPath.section != 2 || indexPath.row % 2 != 1) return;
     NSString *cat = SBAllCategories()[indexPath.row / 2];
-    NSString *colorKey = SB_COLOR_KEY(cat);
-    [self setActiveColorKey:colorKey];[self setActiveColorIndexPath:indexPath];
+    NSString *colorKey = SB_COLOR_KEY(cat);[self setActiveColorKey:colorKey];[self setActiveColorIndexPath:indexPath];
     UIColorPickerViewController *picker = [[UIColorPickerViewController alloc] init];
-    picker.title = [NSString stringWithFormat:@"%@ color", SBCategoryName(cat)];
+    picker.title =[NSString stringWithFormat:@"%@ color", SBCategoryName(cat)];
     picker.supportsAlpha = NO;
     picker.delegate = self;
     NSString *hex = [[NSUserDefaults standardUserDefaults] stringForKey:colorKey];
-    if (hex) picker.selectedColor = SBColorFromHex(hex);
-    [self presentViewController:picker animated:YES completion:nil];
+    if (hex) picker.selectedColor = SBColorFromHex(hex);[self presentViewController:picker animated:YES completion:nil];
 }
 - (void)colorPickerViewControllerDidFinish:(UIColorPickerViewController *)vc {
     [[NSUserDefaults standardUserDefaults] setObject:SBHexFromColor(vc.selectedColor) forKey:[self activeColorKey]];
@@ -372,7 +348,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{
         SBEnabled:              @YES,
         SBShowNotifications:    @YES,
-        SBAudioNotification:    @NO,
+        SBHapticFeedback:       @NO,
         SBSegmentsInFeed:       @NO,
         SBSegmentsInMiniPlayer: @YES,
         SBShowDuration:         @NO,

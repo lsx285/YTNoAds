@@ -52,7 +52,7 @@
 
 #define SBEnabled              @"YouModSBEnabled"
 #define SBShowNotifications    @"YouModSBShowNotifications"
-#define SBAudioNotification    @"YouModSBAudioNotification"
+#define SBHapticFeedback       @"YouModSBHapticFeedback"
 #define SBSegmentsInFeed       @"YouModSBSegmentsInFeed"
 #define SBSegmentsInMiniPlayer @"YouModSBSegmentsInMiniPlayer"
 #define SBShowDuration         @"YouModSBShowDuration"
@@ -60,11 +60,17 @@
 #define SBSkipAlertDuration    @"YouModSBSkipAlertDuration"
 #define SBUnskipAlertDuration  @"YouModSBUnskipAlertDuration"
 
-#define SB_ACTION_KEY(cat) [NSString stringWithFormat:@"YouModSBAction_%@", cat]
-#define SB_COLOR_KEY(cat)  [NSString stringWithFormat:@"YouModSBColor_%@", cat]
+#define SB_ACTION_KEY(cat)[NSString stringWithFormat:@"YouModSBAction_%@", cat]
+#define SB_COLOR_KEY(cat)[NSString stringWithFormat:@"YouModSBColor_%@", cat]
 
 #define SBSegmentsDidLoadNotification @"SBSegmentsDidLoad"
-#define SBMarkerTag  9900
+
+#define SB_MARKER_HEIGHT_DEFAULT 3.0
+#define SB_MARKER_HEIGHT_MIN     2.0
+#define SB_POI_WIDTH             3.0
+#define SB_HAPTIC_SOUND_ID       1519
+#define SB_BACKWARD_SEEK_THRESH  2.0
+#define SB_NOTIFICATION_DELAY    0.3
 
 static inline NSArray<NSString *> *SBAllCategories(void) {
     static NSArray *cats;
@@ -76,20 +82,20 @@ static inline NSArray<NSString *> *SBAllCategories(void) {
     return cats;
 }
 
-static inline NSString *SBShortCategoryName(NSString *category) {
+static inline NSString *SBCategoryName(NSString *category) {
     static NSDictionary *names;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         names = @{
             @"sponsor":        @"Sponsor",
-            @"intro":          @"Intro",
-            @"outro":          @"Endcards",
-            @"interaction":    @"Interaction",
-            @"selfpromo":      @"Self-promotion",
-            @"music_offtopic": @"Non-music",
-            @"preview":        @"Preview",
+            @"intro":          @"Intro / Intermission",
+            @"outro":          @"Endcards / Credits",
+            @"interaction":    @"Interaction Reminder",
+            @"selfpromo":      @"Unpaid Self-promotion",
+            @"music_offtopic": @"Non-music Section",
+            @"preview":        @"Preview / Recap",
             @"poi_highlight":  @"Highlight",
-            @"filler":         @"Filler",
+            @"filler":         @"Filler Tangent",
         };
     });
     return names[category] ?: category;
@@ -133,8 +139,14 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, strong) SBSkipNotificationView *sbNotificationView;
 @property (nonatomic, assign) BOOL sbEnabledForVideo;
 @property (nonatomic, assign) CGFloat sbLastSeenTime;
+@property (nonatomic, assign) CGFloat sbMinDuration;
+@property (nonatomic, assign) BOOL sbHapticFeedback;
+@property (nonatomic, assign) BOOL sbShowNotifications;
+@property (nonatomic, assign) CGFloat sbSkipAlertDuration;
+@property (nonatomic, assign) CGFloat sbUnskipAlertDuration;
 - (void)sbPerformSkip:(SBSegment *)segment;
 - (void)sbShowAskNotification:(SBSegment *)segment;
+- (void)sbTriggerLoadIfNeededForVideoID:(NSString *)videoID;
 @end
 
 void SBClearSegmentCache(void);

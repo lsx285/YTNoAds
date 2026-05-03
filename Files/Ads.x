@@ -24,7 +24,7 @@ static BOOL isAdRenderer(YTIElementRenderer *renderer) {
 }
 
 static BOOL isAdReelModel(YTReelModel *model) {
-    return [model respondsToSelector:@selector(videoType)] && model.videoType == 3;
+    return[model respondsToSelector:@selector(videoType)] && model.videoType == 3;
 }
 
 static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSectionRenderer *> *array) {
@@ -32,25 +32,25 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
     for (NSInteger i = newArray.count - 1; i >= 0; i--) {
         YTIItemSectionRenderer *section = newArray[i];
         BOOL removeSection = NO;
-        
         if ([section isKindOfClass:%c(YTIShelfRenderer)]) {
             NSMutableArray *items = ((YTIShelfRenderer *)section).content.horizontalListRenderer.itemsArray;
             for (NSInteger j = items.count - 1; j >= 0; j--) {
-                if (isAdRenderer([items[j] elementRenderer])) {[items removeObjectAtIndex:j];
+                if (isAdRenderer([items[j] elementRenderer])) {
+                    [items removeObjectAtIndex:j];
                 }
             }
         } else if ([section isKindOfClass:%c(YTIItemSectionRenderer)]) {
             NSMutableArray *contents = section.contentsArray;
             if (contents.count > 1) {
                 for (NSInteger j = contents.count - 1; j >= 0; j--) {
-                    if (isAdRenderer([contents[j] elementRenderer])) {[contents removeObjectAtIndex:j];
+                    if (isAdRenderer([contents[j] elementRenderer])) {
+                        [contents removeObjectAtIndex:j];
                     }
                 }
             }
             removeSection = contents.count > 0 && isAdRenderer(((YTIItemSectionSupportedRenderers *)[contents firstObject]).elementRenderer);
         }
-        if (removeSection) {
-            [newArray removeObjectAtIndex:i];
+        if (removeSection) {[newArray removeObjectAtIndex:i];
         }
     }
     return newArray;
@@ -324,6 +324,12 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
 
 %hook YTIElementRenderer
 - (NSData *)elementData {
-    return isAdDescription([self description]) ? [NSData data] : %orig;
+    if (([self respondsToSelector:@selector(hasCompatibilityOptions)] &&
+         self.hasCompatibilityOptions &&
+         self.compatibilityOptions.hasAdLoggingData) ||
+        isAdDescription([self description])) {
+        return [NSData data];
+    }
+    return %orig;
 }
 %end
