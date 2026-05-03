@@ -115,7 +115,11 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
             }
         }
         dispatch_async(dispatch_get_main_queue(), ^{
-            @synchronized(sbSegmentCache) { sbSegmentCache[videoID] = segments; }
+            @synchronized(sbSegmentCache) {
+                sbSegmentCache[videoID] = segments;
+                while (sbSegmentCache.count > 50)
+                    [sbSegmentCache removeObjectForKey:sbSegmentCache.allKeys.firstObject];
+            }
             if (completion) completion(segments);
         });
     }] resume];
@@ -124,12 +128,11 @@ static NSString *SBLocalizedCategoryName(NSString *category) {
 @end
 
 %hook YTPlayerViewController
-%property (nonatomic, strong) NSString              *sbLastVideoID;
-%property (nonatomic, strong) NSArray               *sbSegments;
-%property (nonatomic, strong) NSMutableSet          *sbSkippedSegments;
+%property (nonatomic, strong) NSString               *sbLastVideoID;
+%property (nonatomic, strong) NSArray                *sbSegments;
+%property (nonatomic, strong) NSMutableSet           *sbSkippedSegments;
 %property (nonatomic, strong) SBSkipNotificationView *sbNotificationView;
-%property (nonatomic, strong) UIButton              *sbOverlayButton;
-%property (nonatomic, assign) BOOL                   sbEnabledForVideo;
+%property (nonatomic, assign) BOOL                    sbEnabledForVideo;
 
 - (void)setContentVideoID:(NSString *)videoID {
     %orig;
