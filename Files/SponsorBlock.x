@@ -265,7 +265,7 @@ UIColor *SBColorFromHex(NSString *hex) {
 %new
 - (void)sbShowAskNotification:(SBSegment *)segment {
     [self.sbSkippedSegments addObject:segment.UUID];
-    NSString *message = [NSString stringWithFormat:@"%@ segment detected.\nWould you like to skip?", SBCategoryName(segment.category)];
+    NSString *message = [NSString stringWithFormat:@"%@ segment detected", SBCategoryName(segment.category)];
     float endTime = segment.endTime;
     
     __weak typeof(self) weakSelf = self;
@@ -283,7 +283,7 @@ UIColor *SBColorFromHex(NSString *hex) {
 
 %new
 - (void)sbShowHighlightNotification:(SBSegment *)segment {
-    NSString *message = @"Highlight detected.\nSkip to it?";
+    NSString *message = @"Highlight available";
     float startTime = segment.startTime;
     
     __weak typeof(self) weakSelf = self;
