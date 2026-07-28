@@ -74,45 +74,36 @@
         // Force layout so the pill has a real frame before we trace its border.
         [parentView layoutIfNeeded];
 
-        CGFloat lineWidth = 2.0;
-        CGRect strokeRect = CGRectInset(view.bounds, lineWidth / 2.0, lineWidth / 2.0);
-        UIBezierPath *strokePath = [UIBezierPath bezierPathWithRoundedRect:strokeRect
-                                                                cornerRadius:(20.0 - lineWidth / 2.0)];
+        // A translucent fill sits behind the label and wipes away from right to
+        // left over the notification's lifetime, signaling it's about to dismiss.
+        // The fill is clipped to the pill's rounded-rect shape via its own path,
+        // then a solid mask that shrinks horizontally does the actual wiping.
+        // Anchoring the mask at its left edge and animating transform.scale.x
+        // from 1 -> 0 keeps the left edge pinned while the visible fill collapses
+        // in from the right, like a countdown draining out of the pill.
+        CAShapeLayer *fillLayer = [CAShapeLayer layer];
+        fillLayer.frame     = view.bounds;
+        fillLayer.path      = [UIBezierPath bezierPathWithRoundedRect:view.bounds
+                                                           cornerRadius:20.0].CGPath;
+        fillLayer.fillColor = [UIColor colorWithWhite:1.0 alpha:0.22].CGColor;
+        view.fillLayer = fillLayer;
+        [view.layer insertSublayer:fillLayer atIndex:0]; // behind the message label
 
-        CAShapeLayer *strokeLayer = [CAShapeLayer layer];
-        strokeLayer.frame        = view.bounds; // establishes the coordinate space the mask below aligns to
-        strokeLayer.path         = strokePath.CGPath;
-        strokeLayer.fillColor    = [UIColor clearColor].CGColor;
-        strokeLayer.strokeColor  = [UIColor colorWithWhite:1.0 alpha:0.85].CGColor;
-        strokeLayer.lineWidth    = lineWidth;
-        strokeLayer.strokeStart  = 0.0;
-        strokeLayer.strokeEnd    = 1.0; // full outline drawn statically; the mask below does the draining
-        view.strokeLayer = strokeLayer;
-        [view.layer addSublayer:strokeLayer];
+        CALayer *wipeMask = [CALayer layer];
+        wipeMask.backgroundColor = [UIColor blackColor].CGColor;
+        wipeMask.anchorPoint     = CGPointMake(0.0, 0.5);
+        wipeMask.bounds          = CGRectMake(0, 0, view.bounds.size.width, view.bounds.size.height);
+        wipeMask.position        = CGPointMake(0.0, CGRectGetMidY(view.bounds));
+        fillLayer.mask = wipeMask;
 
-        // Border traces the full pill outline, then drains away from right to left
-        // over the notification's lifetime, signaling it's about to dismiss.
-        // Rather than trimming along the path's own parametrization (which peels
-        // off whichever edge happens to be drawn last and can leave a stray
-        // corner behind), we clip the fully-drawn outline with a solid mask that
-        // shrinks horizontally. Anchoring the mask at its left edge and animating
-        // transform.scale.x from 1 -> 0 keeps the left edge pinned in place while
-        // the visible region collapses in from the right.
-        CALayer *drainMask = [CALayer layer];
-        drainMask.backgroundColor = [UIColor blackColor].CGColor;
-        drainMask.anchorPoint     = CGPointMake(0.0, 0.5);
-        drainMask.bounds          = CGRectMake(0, 0, view.bounds.size.width, view.bounds.size.height);
-        drainMask.position        = CGPointMake(0.0, CGRectGetMidY(view.bounds));
-        strokeLayer.mask = drainMask;
-
-        CABasicAnimation *drain = [CABasicAnimation animationWithKeyPath:@"transform.scale.x"];
-        drain.fromValue        = @(1.0);
-        drain.toValue          = @(0.0);
-        drain.duration         = duration;
-        drain.timingFunction   = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
-        drain.fillMode         = kCAFillModeForwards;
-        drain.removedOnCompletion = NO;
-        [drainMask addAnimation:drain forKey:@"sbDrain"];
+        CABasicAnimation *wipe = [CABasicAnimation animationWithKeyPath:@"transform.scale.x"];
+        wipe.fromValue        = @(1.0);
+        wipe.toValue          = @(0.0);
+        wipe.duration         = duration;
+        wipe.timingFunction   = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+        wipe.fillMode         = kCAFillModeForwards;
+        wipe.removedOnCompletion = NO;
+        [wipeMask addAnimation:wipe forKey:@"sbWipe"];
 
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{ [view dismiss]; });
