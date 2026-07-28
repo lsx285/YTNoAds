@@ -303,10 +303,11 @@ UIColor *SBColorFromHex(NSString *hex) {
 - (void)sbEnqueueNotificationWithMessage:(NSString *)message buttonTitle:(NSString *)buttonTitle
                                    action:(void (^)(void))action duration:(NSTimeInterval)duration {
     if (!self.sbNotificationQueue) self.sbNotificationQueue = [NSMutableArray array];
+    void (^safeAction)(void) = action ?: ^{};
     [self.sbNotificationQueue addObject:@{
         @"message":     message ?: @"",
         @"buttonTitle": buttonTitle ?: @"",
-        @"action":      action ? [action copy] : ^{},
+        @"action":      [safeAction copy],
         @"duration":    @(duration)
     }];
     [self sbProcessNotificationQueue];
