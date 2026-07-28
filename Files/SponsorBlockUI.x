@@ -27,7 +27,7 @@
 
     SBSkipNotificationView *view = [[SBSkipNotificationView alloc] initWithFrame:CGRectZero];
     view.translatesAutoresizingMaskIntoConstraints = NO;
-    view.backgroundColor     = [UIColor clearColor];
+    view.backgroundColor     = [UIColor colorWithWhite:0.0 alpha:0.7];
     view.layer.cornerRadius  = 20.0;
     view.layer.shadowColor   = [UIColor blackColor].CGColor;
     view.layer.shadowOffset  = CGSizeMake(0, 4);
@@ -39,17 +39,6 @@
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];
     [view addGestureRecognizer:tap];
 
-    // Fill layer sits behind the label and drains (shrinks) over the notification's
-    // lifetime, so the pill visually empties itself to signal it's about to dismiss.
-    UIView *fillView = [[UIView alloc] initWithFrame:CGRectZero];
-    fillView.translatesAutoresizingMaskIntoConstraints = NO;
-    fillView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.9];
-    fillView.layer.cornerRadius = 20.0;
-    fillView.clipsToBounds = YES;
-    fillView.userInteractionEnabled = NO;
-    view.fillView = fillView;
-    [view addSubview:fillView];
-
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.translatesAutoresizingMaskIntoConstraints = NO;
     label.text          = message;
@@ -60,6 +49,17 @@
     view.messageLabel   = label;
     [view addSubview:label];
 
+    // Thin indicator line along the bottom of the pill that drains from full width
+    // to empty over the notification's lifetime, signaling it's about to dismiss.
+    UIView *indicatorView = [[UIView alloc] initWithFrame:CGRectZero];
+    indicatorView.translatesAutoresizingMaskIntoConstraints = NO;
+    indicatorView.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.85];
+    indicatorView.layer.cornerRadius = 1.0;
+    indicatorView.clipsToBounds = YES;
+    indicatorView.userInteractionEnabled = NO;
+    view.indicatorView = indicatorView;
+    [view addSubview:indicatorView];
+
     [parentView addSubview:view];
 
     BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
@@ -69,13 +69,13 @@
         [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
         [view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],
         [view.heightAnchor   constraintEqualToConstant:40.0],
-        [fillView.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor],
-        [fillView.trailingAnchor constraintEqualToAnchor:view.trailingAnchor],
-        [fillView.topAnchor      constraintEqualToAnchor:view.topAnchor],
-        [fillView.bottomAnchor   constraintEqualToAnchor:view.bottomAnchor],
         [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],
         [label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
-        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
+        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor],
+        [indicatorView.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor  constant:14.0],
+        [indicatorView.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:-14.0],
+        [indicatorView.bottomAnchor   constraintEqualToAnchor:view.bottomAnchor   constant:-6.0],
+        [indicatorView.heightAnchor   constraintEqualToConstant:2.0]
     ]];
 
     view.alpha     = 0.0;
@@ -86,16 +86,16 @@
     } completion:nil];
 
     if (duration > 0) {
-        // Force layout so fillView has a real frame before we re-anchor its layer
+        // Force layout so indicatorView has a real frame before we re-anchor its layer
         // for the drain animation (keeps the left edge fixed while it shrinks).
         [parentView layoutIfNeeded];
-        CGRect fillFrame = fillView.frame;
-        fillView.layer.anchorPoint = CGPointMake(0.0, 0.5);
-        fillView.frame = fillFrame;
+        CGRect indicatorFrame = indicatorView.frame;
+        indicatorView.layer.anchorPoint = CGPointMake(0.0, 0.5);
+        indicatorView.frame = indicatorFrame;
 
         [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionCurveLinear
                           animations:^{
-                              fillView.transform = CGAffineTransformMakeScale(0.0001, 1.0);
+                              indicatorView.transform = CGAffineTransformMakeScale(0.0001, 1.0);
                           } completion:nil];
 
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)),
