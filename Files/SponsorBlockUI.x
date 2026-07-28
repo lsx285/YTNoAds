@@ -82,10 +82,16 @@
 }
 
 - (void)dismiss {
+    if (self.superview == nil && self.alpha == 0.0) return; // already dismissed/dismissing
+    void (^onDismiss)(void) = self.onDismiss;
+    self.onDismiss = nil; // ensure the callback only ever fires once
     [UIView animateWithDuration:0.2 animations:^{
         self.alpha     = 0.0;
         self.transform = CGAffineTransformMakeScale(0.9, 0.9);
-    } completion:^(BOOL _) { [self removeFromSuperview]; }];
+    } completion:^(BOOL _) {
+        [self removeFromSuperview];
+        if (onDismiss) onDismiss();
+    }];
 }
 
 @end

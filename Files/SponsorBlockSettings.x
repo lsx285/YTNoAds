@@ -390,7 +390,7 @@ static NSDictionary *sbToggleDefAtRow(NSInteger row) {
         SB_COLOR_KEY(@"selfpromo"):       @"#FFFF00",
         SB_COLOR_KEY(@"music_offtopic"):  @"#FF9900",
         SB_COLOR_KEY(@"preview"):         @"#008FD6",
-        SB_COLOR_KEY(@"poi_highlight"):   @"#FFFFFF",
+        SB_COLOR_KEY(@"poi_highlight"):   @"#FF1684",
         SB_COLOR_KEY(@"filler"):          @"#7300FF",
     }];
     %init;

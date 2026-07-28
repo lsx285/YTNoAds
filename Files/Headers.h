@@ -127,6 +127,7 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, strong) UILabel *messageLabel;
 @property (nonatomic, strong) UIButton *actionButton;
 @property (nonatomic, copy) void (^onAction)(void);
+@property (nonatomic, copy) void (^onDismiss)(void);
 + (instancetype)showInView:(UIView *)parentView message:(NSString *)message buttonTitle:(NSString *)buttonTitle action:(void (^)(void))action duration:(NSTimeInterval)duration;
 - (void)dismiss;
 @end
@@ -144,9 +145,15 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, assign) CGFloat sbSkipAlertDuration;
 @property (nonatomic, assign) CGFloat sbUnskipAlertDuration;
 @property (nonatomic, assign) BOOL sbIsPerformingSystemSkip;
+@property (nonatomic, strong) NSMutableArray *sbNotificationQueue;
+@property (nonatomic, assign) BOOL sbNotificationShowing;
+@property (nonatomic, assign) BOOL sbHighlightPromptShown;
 - (void)sbPerformSkip:(SBSegment *)segment;
 - (void)sbShowAskNotification:(SBSegment *)segment;
+- (void)sbShowHighlightNotification:(SBSegment *)segment;
 - (void)sbTriggerLoadIfNeededForVideoID:(NSString *)videoID;
+- (void)sbEnqueueNotificationWithMessage:(NSString *)message buttonTitle:(NSString *)buttonTitle action:(void (^)(void))action duration:(NSTimeInterval)duration;
+- (void)sbProcessNotificationQueue;
 @end
 
 void SBClearSegmentCache(void);

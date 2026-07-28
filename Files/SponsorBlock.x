@@ -120,6 +120,9 @@ UIColor *SBColorFromHex(NSString *hex) {
 %property (nonatomic, assign) CGFloat                 sbSkipAlertDuration;
 %property (nonatomic, assign) CGFloat                 sbUnskipAlertDuration;
 %property (nonatomic, assign) BOOL                    sbIsPerformingSystemSkip;
+%property (nonatomic, strong) NSMutableArray         *sbNotificationQueue;
+%property (nonatomic, assign) BOOL                    sbNotificationShowing;
+%property (nonatomic, assign) BOOL                    sbHighlightPromptShown;
 
 - (void)setContentVideoID:(NSString *)videoID {
     %orig;
@@ -164,7 +167,11 @@ UIColor *SBColorFromHex(NSString *hex) {
     self.sbShowNotifications = IS_ENABLED(SBShowNotifications);
     self.sbSkipAlertDuration = FLOAT_FOR_KEY(SBSkipAlertDuration) > 0 ? FLOAT_FOR_KEY(SBSkipAlertDuration) : 4.0;
     self.sbUnskipAlertDuration = FLOAT_FOR_KEY(SBUnskipAlertDuration) > 0 ? FLOAT_FOR_KEY(SBUnskipAlertDuration) : 4.0;
+    self.sbHighlightPromptShown = NO;
+    [self.sbNotificationQueue removeAllObjects];
+    self.sbNotificationShowing = NO;
     [self.sbNotificationView dismiss];
+    self.sbNotificationView = nil;
     
     __weak typeof(self) weakSelf = self;
     [SBRequest fetchSegmentsForVideoID:videoID completion:^(NSArray<SBSegment *> *segments) {
@@ -174,7 +181,20 @@ UIColor *SBColorFromHex(NSString *hex) {
         [[NSNotificationCenter defaultCenter] postNotificationName:SBSegmentsDidLoadNotification
                                                             object:strongSelf
                                                           userInfo:@{@"segments": segments}];
+        [strongSelf sbCheckForHighlightSegment:segments];
     }];
+}
+
+%new
+- (void)sbCheckForHighlightSegment:(NSArray<SBSegment *> *)segments {
+    if (self.sbHighlightPromptShown || !self.sbShowNotifications) return;
+    for (SBSegment *segment in segments) {
+        if ([segment.category isEqualToString:@"poi_highlight"] && segment.action == SBSegmentActionSkipTo) {
+            self.sbHighlightPromptShown = YES;
+            [self sbShowHighlightNotification:segment];
+            return;
+        }
+    }
 }
 
 %new
@@ -223,23 +243,22 @@ UIColor *SBColorFromHex(NSString *hex) {
     NSString *message = [NSString stringWithFormat:@"%@ segment has been skipped", SBCategoryName(segment.category)];
     float startTime = segment.startTime;
     NSString *segmentUUID = segment.UUID;
+    CGFloat unskipDuration = self.sbUnskipAlertDuration;
     
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(SB_NOTIFICATION_DELAY * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
-        strongSelf.sbNotificationView = [SBSkipNotificationView
-            showInView:strongSelf.playerView
-               message:message
-           buttonTitle:@"Unskip"
-                action:^{ 
-                    __strong typeof(weakSelf) ss = weakSelf; 
-                    if (ss) {
-                        [ss.sbIgnoredSegments addObject:segmentUUID];
-                        [ss seekToTime:(CGFloat)startTime]; 
-                    }
-                }
-              duration:strongSelf.sbUnskipAlertDuration];
+        [strongSelf sbEnqueueNotificationWithMessage:message
+                                          buttonTitle:@"Unskip"
+                                               action:^{
+                                                   __strong typeof(weakSelf) ss = weakSelf;
+                                                   if (ss) {
+                                                       [ss.sbIgnoredSegments addObject:segmentUUID];
+                                                       [ss seekToTime:(CGFloat)startTime];
+                                                   }
+                                               }
+                                             duration:unskipDuration];
     });
 }
 
@@ -250,18 +269,78 @@ UIColor *SBColorFromHex(NSString *hex) {
     float endTime = segment.endTime;
     
     __weak typeof(self) weakSelf = self;
+    [self sbEnqueueNotificationWithMessage:message
+                                buttonTitle:@"Skip"
+                                     action:^{
+                                         __strong typeof(weakSelf) ss = weakSelf;
+                                         if (ss) {
+                                             ss.sbIsPerformingSystemSkip = YES;
+                                             [ss seekToTime:(CGFloat)endTime];
+                                         }
+                                     }
+                                   duration:self.sbSkipAlertDuration];
+}
+
+%new
+- (void)sbShowHighlightNotification:(SBSegment *)segment {
+    NSString *message = @"Highlight detected.\nSkip to it?";
+    float startTime = segment.startTime;
+    
+    __weak typeof(self) weakSelf = self;
+    [self sbEnqueueNotificationWithMessage:message
+                                buttonTitle:@"Skip to highlight"
+                                     action:^{
+                                         __strong typeof(weakSelf) ss = weakSelf;
+                                         if (ss) {
+                                             ss.sbIsPerformingSystemSkip = YES;
+                                             [ss seekToTime:(CGFloat)startTime];
+                                         }
+                                     }
+                                   duration:self.sbSkipAlertDuration];
+}
+
+%new
+- (void)sbEnqueueNotificationWithMessage:(NSString *)message buttonTitle:(NSString *)buttonTitle
+                                   action:(void (^)(void))action duration:(NSTimeInterval)duration {
+    if (!self.sbNotificationQueue) self.sbNotificationQueue = [NSMutableArray array];
+    [self.sbNotificationQueue addObject:@{
+        @"message":     message ?: @"",
+        @"buttonTitle": buttonTitle ?: @"",
+        @"action":      action ? [action copy] : ^{},
+        @"duration":    @(duration)
+    }];
+    [self sbProcessNotificationQueue];
+}
+
+%new
+- (void)sbProcessNotificationQueue {
+    if (self.sbNotificationShowing || !self.sbNotificationQueue.count) return;
+    self.sbNotificationShowing = YES;
+
+    NSDictionary *item = self.sbNotificationQueue.firstObject;
+    [self.sbNotificationQueue removeObjectAtIndex:0];
+
+    __weak typeof(self) weakSelf = self;
     self.sbNotificationView = [SBSkipNotificationView
         showInView:self.playerView
-           message:message
-       buttonTitle:@"Skip"
-            action:^{ 
-                __strong typeof(weakSelf) ss = weakSelf; 
-                if (ss) {
-                    ss.sbIsPerformingSystemSkip = YES;
-                    [ss seekToTime:(CGFloat)endTime]; 
-                }
-            }
-          duration:self.sbSkipAlertDuration];
+           message:item[@"message"]
+       buttonTitle:item[@"buttonTitle"]
+            action:item[@"action"]
+          duration:[item[@"duration"] doubleValue]];
+
+    if (!self.sbNotificationView) {
+        // No playerView to attach to (e.g. player not visible) — don't stall the queue.
+        self.sbNotificationShowing = NO;
+        [self sbProcessNotificationQueue];
+        return;
+    }
+
+    self.sbNotificationView.onDismiss = ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        strongSelf.sbNotificationShowing = NO;
+        [strongSelf sbProcessNotificationQueue];
+    };
 }
 %end
 
