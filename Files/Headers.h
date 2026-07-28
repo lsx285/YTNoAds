@@ -46,30 +46,18 @@
 - (void)presentFromViewController:(UIViewController *)vc animated:(BOOL)animated completion:(void (^)(void))completion;
 @end
 
-#define IS_ENABLED(k)    [[NSUserDefaults standardUserDefaults] boolForKey:k]
-#define INTFORVAL(v)     [[NSUserDefaults standardUserDefaults] integerForKey:v]
-#define FLOAT_FOR_KEY(k) [[NSUserDefaults standardUserDefaults] floatForKey:k]
-
-#define SBEnabled              @"YouModSBEnabled"
-#define SBShowNotifications    @"YouModSBShowNotifications"
-#define SBHapticFeedback       @"YouModSBHapticFeedback"
-#define SBSegmentsInFeed       @"YouModSBSegmentsInFeed"
-#define SBSegmentsInMiniPlayer @"YouModSBSegmentsInMiniPlayer"
-#define SBShowDuration         @"YouModSBShowDuration"
-#define SBSkipAlertDuration    @"YouModSBSkipAlertDuration"
-#define SBUnskipAlertDuration  @"YouModSBUnskipAlertDuration"
-
-#define SB_ACTION_KEY(cat)[NSString stringWithFormat:@"YouModSBAction_%@", cat]
-#define SB_COLOR_KEY(cat)[NSString stringWithFormat:@"YouModSBColor_%@", cat]
-
 #define SBSegmentsDidLoadNotification @"SBSegmentsDidLoad"
 
 #define SB_MARKER_HEIGHT_DEFAULT 3.0
 #define SB_MARKER_HEIGHT_MIN     2.0
 #define SB_POI_WIDTH             3.0
-#define SB_HAPTIC_SOUND_ID       1519
 #define SB_BACKWARD_SEEK_THRESH  2.0
 #define SB_NOTIFICATION_DELAY    0.3
+
+#define SB_ENABLED               YES
+#define SB_SHOW_NOTIFICATIONS    YES
+#define SB_SKIP_ALERT_DURATION   4.0
+#define SB_UNSKIP_ALERT_DURATION 4.0
 
 static inline NSArray<NSString *> *SBAllCategories(void) {
     static NSArray *cats;
@@ -108,6 +96,45 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
     SBSegmentActionSkipTo   = 4
 };
 
+static inline SBSegmentAction SBDefaultActionForCategory(NSString *category) {
+    static NSDictionary *actions;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        actions = @{
+            @"sponsor":        @(SBSegmentActionAutoSkip),
+            @"intro":          @(SBSegmentActionAutoSkip),
+            @"outro":          @(SBSegmentActionAutoSkip),
+            @"interaction":    @(SBSegmentActionAutoSkip),
+            @"selfpromo":      @(SBSegmentActionAutoSkip),
+            @"music_offtopic": @(SBSegmentActionAutoSkip),
+            @"preview":        @(SBSegmentActionAutoSkip),
+            @"poi_highlight":  @(SBSegmentActionSkipTo),
+            @"filler":         @(SBSegmentActionDisplay),
+        };
+    });
+    NSNumber *val = actions[category];
+    return val ? (SBSegmentAction)val.integerValue : SBSegmentActionDisable;
+}
+
+static inline NSString *SBDefaultColorHexForCategory(NSString *category) {
+    static NSDictionary *colors;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        colors = @{
+            @"sponsor":        @"#00D400",
+            @"intro":          @"#00FFFF",
+            @"outro":          @"#0202ED",
+            @"interaction":    @"#CC00FF",
+            @"selfpromo":      @"#FFFF00",
+            @"music_offtopic": @"#FF9900",
+            @"preview":        @"#008FD6",
+            @"poi_highlight":  @"#FF1684",
+            @"filler":         @"#7300FF",
+        };
+    });
+    return colors[category] ?: @"#FFFFFF";
+}
+
 @interface SBSegment : NSObject
 @property (nonatomic, strong) NSString *UUID;
 @property (nonatomic, strong) NSString *category;
@@ -141,10 +168,6 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @property (nonatomic, strong) SBSkipNotificationView *sbNotificationView;
 @property (nonatomic, assign) BOOL sbEnabledForVideo;
 @property (nonatomic, assign) CGFloat sbLastSeenTime;
-@property (nonatomic, assign) BOOL sbHapticFeedback;
-@property (nonatomic, assign) BOOL sbShowNotifications;
-@property (nonatomic, assign) CGFloat sbSkipAlertDuration;
-@property (nonatomic, assign) CGFloat sbUnskipAlertDuration;
 @property (nonatomic, assign) BOOL sbIsPerformingSystemSkip;
 @property (nonatomic, strong) NSMutableArray *sbNotificationQueue;
 @property (nonatomic, assign) BOOL sbNotificationShowing;
@@ -159,4 +182,3 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 @end
 
 void SBClearSegmentCache(void);
-NSString *SBCacheSizeFormatted(void);
