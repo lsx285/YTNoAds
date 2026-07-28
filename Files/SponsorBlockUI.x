@@ -49,17 +49,6 @@
     view.messageLabel   = label;
     [view addSubview:label];
 
-    // Thin indicator line along the bottom of the pill that drains from full width
-    // to empty over the notification's lifetime, signaling it's about to dismiss.
-    UIView *indicatorView = [[UIView alloc] initWithFrame:CGRectZero];
-    indicatorView.translatesAutoresizingMaskIntoConstraints = NO;
-    indicatorView.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.85];
-    indicatorView.layer.cornerRadius = 1.0;
-    indicatorView.clipsToBounds = YES;
-    indicatorView.userInteractionEnabled = NO;
-    view.indicatorView = indicatorView;
-    [view addSubview:indicatorView];
-
     [parentView addSubview:view];
 
     BOOL isLandscape = parentView.bounds.size.width > parentView.bounds.size.height;
@@ -71,11 +60,7 @@
         [view.heightAnchor   constraintEqualToConstant:40.0],
         [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],
         [label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
-        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor],
-        [indicatorView.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor  constant:14.0],
-        [indicatorView.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:-14.0],
-        [indicatorView.bottomAnchor   constraintEqualToAnchor:view.bottomAnchor   constant:-6.0],
-        [indicatorView.heightAnchor   constraintEqualToConstant:2.0]
+        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
     ]];
 
     view.alpha     = 0.0;
@@ -86,17 +71,34 @@
     } completion:nil];
 
     if (duration > 0) {
-        // Force layout so indicatorView has a real frame before we re-anchor its layer
-        // for the drain animation (keeps the left edge fixed while it shrinks).
+        // Force layout so the pill has a real frame before we trace its border.
         [parentView layoutIfNeeded];
-        CGRect indicatorFrame = indicatorView.frame;
-        indicatorView.layer.anchorPoint = CGPointMake(0.0, 0.5);
-        indicatorView.frame = indicatorFrame;
 
-        [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionCurveLinear
-                          animations:^{
-                              indicatorView.transform = CGAffineTransformMakeScale(0.0001, 1.0);
-                          } completion:nil];
+        CGFloat lineWidth = 2.0;
+        CGRect strokeRect = CGRectInset(view.bounds, lineWidth / 2.0, lineWidth / 2.0);
+        UIBezierPath *strokePath = [UIBezierPath bezierPathWithRoundedRect:strokeRect
+                                                                cornerRadius:(20.0 - lineWidth / 2.0)];
+
+        CAShapeLayer *strokeLayer = [CAShapeLayer layer];
+        strokeLayer.path        = strokePath.CGPath;
+        strokeLayer.fillColor   = [UIColor clearColor].CGColor;
+        strokeLayer.strokeColor = [UIColor colorWithWhite:1.0 alpha:0.85].CGColor;
+        strokeLayer.lineWidth   = lineWidth;
+        strokeLayer.strokeStart = 0.0;
+        strokeLayer.strokeEnd   = 0.0; // final resting value once the drain animation completes
+        view.strokeLayer = strokeLayer;
+        [view.layer addSublayer:strokeLayer];
+
+        // Border traces the full pill outline, then drains away (strokeEnd 1 -> 0)
+        // over the notification's lifetime, signaling it's about to dismiss.
+        CABasicAnimation *drain = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+        drain.fromValue        = @(1.0);
+        drain.toValue          = @(0.0);
+        drain.duration         = duration;
+        drain.timingFunction   = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+        drain.fillMode         = kCAFillModeForwards;
+        drain.removedOnCompletion = NO;
+        [strokeLayer addAnimation:drain forKey:@"sbDrain"];
 
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{ [view dismiss]; });
