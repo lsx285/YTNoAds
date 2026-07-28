@@ -24,7 +24,12 @@ static BOOL isAdRenderer(YTIElementRenderer *renderer) {
 }
 
 static BOOL isAdReelModel(YTReelModel *model) {
-    return [model respondsToSelector:@selector(videoType)] && model.videoType == 3;
+    if (!model) return NO;
+    if ([model respondsToSelector:@selector(videoType)] && model.videoType == 3) return YES;
+    if ([model respondsToSelector:@selector(hasCompatibilityOptions)] &&
+        model.hasCompatibilityOptions && model.compatibilityOptions.hasAdLoggingData) return YES;
+    if ([model respondsToSelector:@selector(description)] && isAdDescription([model description])) return YES;
+    return NO;
 }
 
 static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSectionRenderer *> *array) {
