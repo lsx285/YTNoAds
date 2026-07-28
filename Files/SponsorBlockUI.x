@@ -80,25 +80,39 @@
                                                                 cornerRadius:(20.0 - lineWidth / 2.0)];
 
         CAShapeLayer *strokeLayer = [CAShapeLayer layer];
-        strokeLayer.path        = strokePath.CGPath;
-        strokeLayer.fillColor   = [UIColor clearColor].CGColor;
-        strokeLayer.strokeColor = [UIColor colorWithWhite:1.0 alpha:0.85].CGColor;
-        strokeLayer.lineWidth   = lineWidth;
-        strokeLayer.strokeStart = 0.0;
-        strokeLayer.strokeEnd   = 0.0; // final resting value once the drain animation completes
+        strokeLayer.frame        = view.bounds; // establishes the coordinate space the mask below aligns to
+        strokeLayer.path         = strokePath.CGPath;
+        strokeLayer.fillColor    = [UIColor clearColor].CGColor;
+        strokeLayer.strokeColor  = [UIColor colorWithWhite:1.0 alpha:0.85].CGColor;
+        strokeLayer.lineWidth    = lineWidth;
+        strokeLayer.strokeStart  = 0.0;
+        strokeLayer.strokeEnd    = 1.0; // full outline drawn statically; the mask below does the draining
         view.strokeLayer = strokeLayer;
         [view.layer addSublayer:strokeLayer];
 
-        // Border traces the full pill outline, then drains away (strokeEnd 1 -> 0)
+        // Border traces the full pill outline, then drains away from right to left
         // over the notification's lifetime, signaling it's about to dismiss.
-        CABasicAnimation *drain = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+        // Rather than trimming along the path's own parametrization (which peels
+        // off whichever edge happens to be drawn last and can leave a stray
+        // corner behind), we clip the fully-drawn outline with a solid mask that
+        // shrinks horizontally. Anchoring the mask at its left edge and animating
+        // transform.scale.x from 1 -> 0 keeps the left edge pinned in place while
+        // the visible region collapses in from the right.
+        CALayer *drainMask = [CALayer layer];
+        drainMask.backgroundColor = [UIColor blackColor].CGColor;
+        drainMask.anchorPoint     = CGPointMake(0.0, 0.5);
+        drainMask.bounds          = CGRectMake(0, 0, view.bounds.size.width, view.bounds.size.height);
+        drainMask.position        = CGPointMake(0.0, CGRectGetMidY(view.bounds));
+        strokeLayer.mask = drainMask;
+
+        CABasicAnimation *drain = [CABasicAnimation animationWithKeyPath:@"transform.scale.x"];
         drain.fromValue        = @(1.0);
         drain.toValue          = @(0.0);
         drain.duration         = duration;
         drain.timingFunction   = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
         drain.fillMode         = kCAFillModeForwards;
         drain.removedOnCompletion = NO;
-        [strokeLayer addAnimation:drain forKey:@"sbDrain"];
+        [drainMask addAnimation:drain forKey:@"sbDrain"];
 
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{ [view dismiss]; });
