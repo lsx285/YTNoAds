@@ -151,6 +151,7 @@ typedef NS_ENUM(NSInteger, SBSegmentAction) {
 - (void)sbPerformSkip:(SBSegment *)segment;
 - (void)sbShowAskNotification:(SBSegment *)segment;
 - (void)sbShowHighlightNotification:(SBSegment *)segment;
+- (void)sbCheckForHighlightSegment:(NSArray<SBSegment *> *)segments;
 - (void)sbTriggerLoadIfNeededForVideoID:(NSString *)videoID;
 - (void)sbEnqueueNotificationWithMessage:(NSString *)message buttonTitle:(NSString *)buttonTitle action:(void (^)(void))action duration:(NSTimeInterval)duration;
 - (void)sbProcessNotificationQueue;
