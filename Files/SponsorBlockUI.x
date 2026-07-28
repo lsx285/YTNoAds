@@ -64,7 +64,7 @@
     ]];
 
     view.alpha     = 0.0;
-    view.transform = CGAffineTransformMakeScale(0.9, 0.9);
+    view.transform = CGAffineTransformMakeTranslation(0, 40.0);
     [UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:0 animations:^{
         view.alpha     = 1.0;
         view.transform = CGAffineTransformIdentity;
@@ -121,8 +121,7 @@
     void (^onDismiss)(void) = self.onDismiss;
     self.onDismiss = nil; // ensure the callback only ever fires once
     [UIView animateWithDuration:0.2 animations:^{
-        self.alpha     = 0.0;
-        self.transform = CGAffineTransformMakeScale(0.9, 0.9);
+        self.alpha = 0.0;
     } completion:^(BOOL _) {
         [self removeFromSuperview];
         if (onDismiss) onDismiss();
