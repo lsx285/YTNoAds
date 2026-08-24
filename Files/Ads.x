@@ -11,7 +11,7 @@ static BOOL isAdDescription(NSString *description) {
     static NSRegularExpression *regex;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        regex = [NSRegularExpression regularExpressionWithPattern:@"brand_promo|carousel_footered_layout|carousel_headered_layout|eml\\.expandable_metadata|feed_ad_metadata|full_width_portrait_image_layout|full_width_square_image_layout|landscape_image_wide_button_layout|post_shelf|product_carousel|product_engagement_panel|product_item|shopping_carousel|shopping_item_card_list|statement_banner|square_image_layout|text_image_button_layout|text_search_ad|video_display_full_layout|video_display_full_buttoned_layout" options:0 error:nil];
+        regex = [NSRegularExpression regularExpressionWithPattern:@"brand_promo|brand_video_shelf|brand_video_singleton|carousel_footered_layout|carousel_headered_layout|eml\\.expandable_metadata|feed_ad_metadata|full_width_portrait_image_layout|full_width_square_image_layout|grid_ads_image_layout|landscape_image_wide_button_layout|post_shelf|product_carousel|product_engagement_panel|product_item|shopping_carousel|shopping_item_card_list|statement_banner|square_image_layout|text_image_button_layout|text_search_ad|video_display_full_layout|video_display_full_buttoned_layout" options:0 error:nil];
     });
     return [regex firstMatchInString:description options:0 range:NSMakeRange(0, description.length)] != nil;
 }
@@ -25,6 +25,10 @@ static BOOL isAdRenderer(YTIElementRenderer *renderer) {
 
 static BOOL isAdReelModel(YTReelModel *model) {
     return [model respondsToSelector:@selector(videoType)] && model.videoType == 3;
+}
+
+static BOOL isNonVideoReelModel(YTReelModel *model) {
+    return [model isKindOfClass:%c(YTReelNonVideoContentModel)];
 }
 
 static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSectionRenderer *> *array) {
@@ -104,18 +108,25 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
 %hook YTReelDataSource
 - (YTReelModel *)makeContentModelForEntry:(id)entry {
     YTReelModel *model = %orig;
-    return isAdReelModel(model) ? nil : model;
+    return (isAdReelModel(model) || isNonVideoReelModel(model)) ? nil : model;
+}
+%end
+
+%hook YTReelContentModel
++ (YTReelModel *)makeContentModelForEntry:(id)entry {
+    YTReelModel *model = %orig;
+    return (isAdReelModel(model) || isNonVideoReelModel(model)) ? nil : model;
 }
 %end
 
 %hook YTReelInfinitePlaybackDataSource
 - (YTReelModel *)makeContentModelForEntry:(id)entry {
     YTReelModel *model = %orig;
-    return isAdReelModel(model) ? nil : model;
+    return (isAdReelModel(model) || isNonVideoReelModel(model)) ? nil : model;
 }
 - (void)setReels:(NSMutableOrderedSet<YTReelModel *> *)reels {
     for (NSInteger i = reels.count - 1; i >= 0; i--) {
-        if (isAdReelModel(reels[i])) {
+        if (isAdReelModel(reels[i]) || isNonVideoReelModel(reels[i])) {
             [reels removeObjectAtIndex:i];
         }
     }
@@ -141,8 +152,18 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
 
 %hook YTMainAppVideoPlayerOverlayViewController
 - (void)playerOverlayProvider:(YTPlayerOverlayProvider *)provider didInsertPlayerOverlay:(YTPlayerOverlay *)overlay {
-    if ([[overlay overlayIdentifier] isEqualToString:@"player_overlay_product_in_video"]) return;
+    NSString *identifier = [overlay overlayIdentifier];
+    if ([identifier isEqualToString:@"player_overlay_product_in_video"] ||
+        [identifier isEqualToString:@"player_overlay_paid_content"]) return;
     %orig;
+}
+%end
+
+%hook YTWatchFloatingMiniplayerBadgeView
+- (void)didMoveToWindow {
+    %orig;
+    UIView *badge = [self valueForKey:@"_overlayBadge"];
+    if (badge && badge.superview) [badge removeFromSuperview];
 }
 %end
 
@@ -161,7 +182,10 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
     %orig;
     if ([self.accessibilityIdentifier isEqualToString:@"eml.expandable_metadata.vpp"])
         [self removeFromSuperview];
-    if ([self.accessibilityIdentifier isEqualToString:@"eml.ad_layout.full_width_square_image_layout"])
+    if ([self.accessibilityLabel containsString:@"Premium"] &&
+        [self._viewControllerForAncestor isKindOfClass:%c(YTPageHeaderViewController)])
+        [self removeFromSuperview];
+    if ([self.accessibilityIdentifier containsString:@"eml.ad_layout."])
         self.hidden = YES;
 }
 %end
@@ -180,6 +204,31 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
 
 %hook YTSettingsSectionItemManager
 - (void)updatePremiumEarlyAccessSectionWithEntry:(id)arg1 {}
+- (void)updateUnlimitedSectionWithEntry:(id)arg1 {}
+%end
+
+%hook YTCommerceEventGroupHandler
+- (void)addEventHandlers {}
+%end
+
+%hook YTInterstitialPromoEventGroupHandler
+- (void)addEventHandlers {}
+%end
+
+%hook YTPromosheetEventGroupHandler
+- (void)addEventHandlers {}
+%end
+
+%hook YTPromoThrottleController
+- (BOOL)canShowThrottledPromo { return NO; }
+- (BOOL)canShowThrottledPromoWithFrequencyCap:(id)arg1 { return NO; }
+- (BOOL)canShowThrottledPromoWithFrequencyCaps:(id)arg1 { return NO; }
+%end
+
+%hook YTPromoThrottleControllerImpl
+- (BOOL)canShowThrottledPromo { return NO; }
+- (BOOL)canShowThrottledPromoWithFrequencyCap:(id)arg1 { return NO; }
+- (BOOL)canShowThrottledPromoWithFrequencyCaps:(id)arg1 { return NO; }
 %end
 
 %hook YTIElementRenderer
