@@ -162,7 +162,7 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
 %hook YTWatchFloatingMiniplayerBadgeView
 - (void)didMoveToWindow {
     %orig;
-    UIView *badge = [self valueForKey:@"_overlayBadge"];
+    UIView *badge = [(UIView *)self valueForKey:@"_overlayBadge"];
     if (badge && badge.superview) [badge removeFromSuperview];
 }
 %end
@@ -182,8 +182,9 @@ static NSMutableArray<YTIItemSectionRenderer *> *filteredArray(NSArray<YTIItemSe
     %orig;
     if ([self.accessibilityIdentifier isEqualToString:@"eml.expandable_metadata.vpp"])
         [self removeFromSuperview];
+    id ancestor = [(UIView *)self valueForKey:@"_viewControllerForAncestor"];
     if ([self.accessibilityLabel containsString:@"Premium"] &&
-        [self._viewControllerForAncestor isKindOfClass:%c(YTPageHeaderViewController)])
+        [ancestor isKindOfClass:%c(YTPageHeaderViewController)])
         [self removeFromSuperview];
     if ([self.accessibilityIdentifier containsString:@"eml.ad_layout."])
         self.hidden = YES;
