@@ -1,11 +1,6 @@
 name: Build IPA
 on:
   workflow_dispatch:
-    inputs:
-      ipa_url:
-        description: "URL to the decrypted IPA file"
-        required: true
-        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,12 +14,23 @@ jobs:
       contents: write
 
     steps:
-      - name: Hide Sensitive Inputs
-        uses: levibostian/action-hide-sensitive-inputs@v1
-
-      - name: Download and Validate IPA
+      - name: Download IPA from Source release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          wget "${{ inputs.ipa_url }}" --quiet --no-verbose -O youtube.ipa
+          mkdir -p ipa-source
+          gh release download Source \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.ipa' \
+            --dir ipa-source
+
+          ipa_path=$(find ipa-source -type f -iname '*.ipa' -print -quit)
+          if [ -z "$ipa_path" ]; then
+            echo "::error::No IPA asset was found in the Source release."
+            exit 1
+          fi
+          mv "$ipa_path" youtube.ipa
+
           file_type=$(file --mime-type -b youtube.ipa)
           if [[ "$file_type" != "application/x-ios-app" && "$file_type" != "application/zip" ]]; then
             echo "::error::Validation failed: The downloaded file is not a valid IPA. Detected type: $file_type."
