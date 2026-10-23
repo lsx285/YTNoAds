@@ -127,17 +127,23 @@ static NSString *accessGroupID() {
 %end
 
 %hook GNPEncryptionConfiguration
-- (id)initWithKeychainAccessGroup:(id)arg { return %orig(accessGroupID()); }
+- (id)initWithKeychainAccessGroup:(id)arg {
+    return %orig(accessGroupID());
+}
 - (id)keychainAccessGroup                 { return accessGroupID(); }
 %end
 
 %hook FIRInstallationsStore
-- (id)initWithSecureStorage:(id)arg1 accessGroup:(id)arg2 { return %orig(arg1, accessGroupID()); }
+- (id)initWithSecureStorage:(id)arg1 accessGroup:(id)arg2 {
+    return %orig(arg1, accessGroupID());
+}
 - (id)accessGroup { return accessGroupID(); }
 %end
 
 %hook CHMConfiguration
-- (void)setKeychainAccessGroup:(id)arg { %orig(accessGroupID()); }
+- (void)setKeychainAccessGroup:(id)arg {
+    %orig(accessGroupID());
+}
 - (id)keychainAccessGroup              { return accessGroupID(); }
 %end
 
