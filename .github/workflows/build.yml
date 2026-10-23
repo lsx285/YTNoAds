@@ -18,7 +18,8 @@ jobs:
     name: Build YTNoAds
     runs-on: macos-latest
     permissions:
-      contents: write
+      contents: read
+      actions: write
 
     steps:
       - name: Checkout YTNoAds
@@ -67,27 +68,20 @@ jobs:
       - name: Build YTNoAds
         run: |
           cd YTNoAds
-          echo "YTNOADS_VERSION=$(grep '^Version:' control | cut -d ' ' -f2)" >> $GITHUB_ENV
           make clean package DEBUG=0 FINALPACKAGE=1
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
           make clean package DEBUG=0 FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
-          mv packages/*.deb ${{ github.workspace }}
 
-      - name: Upload the tweak .deb(s)
-        uses: actions/upload-artifact@v4
-        with:
-          name: YTNoAds v${{ env.YTNOADS_VERSION }}
-          path: ${{ github.workspace }}/*.deb
-          if-no-files-found: error
-          overwrite: true
-
-      - name: Create a draft release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ env.YTNOADS_VERSION }}
-          name: v${{ env.YTNOADS_VERSION }}
-          files: |
-            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm.deb
-            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm64.deb
-            dev.lsx.ytnoads_${{ env.YTNOADS_VERSION }}_iphoneos-arm64e.deb
-          draft: true
+      - name: Delete previous workflow runs
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          workflow_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.workflow_id')
+          completed_runs=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow_id/runs?per_page=100&status=completed" --jq '.workflow_runs[].id')
+          if [[ -n "$completed_runs" ]]; then
+            while IFS= read -r run_id; do
+              [[ "$run_id" == "$GITHUB_RUN_ID" ]] && continue
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$run_id"
+            done <<< "$completed_runs"
+          fi
