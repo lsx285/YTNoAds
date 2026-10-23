@@ -85,7 +85,8 @@ static NSString *accessGroupID() {
 }
 - (NSDictionary *)infoDictionary {
     if (![self isEqual:NSBundle.mainBundle]) return %orig;
-    NSMutableDictionary *info = [%orig mutableCopy];
+    id originalInfo = %orig;
+    NSMutableDictionary *info = [originalInfo mutableCopy];
     info[@"CFBundleIdentifier"]  = YT_BUNDLE_ID;
     info[@"CFBundleDisplayName"] = YT_NAME;
     info[@"CFBundleName"]        = YT_NAME;
