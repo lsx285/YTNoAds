@@ -40,6 +40,7 @@
     // content without substituting a different material.
     Class glassEffectClass = NSClassFromString(@"UIGlassEffect");
     UIView *contentView = view;
+    UIView *interactionView = view;
     if (glassEffectClass) {
         UIVisualEffect *material = [[glassEffectClass alloc] init];
         SEL interactiveSelector = NSSelectorFromString(@"setInteractive:");
@@ -48,7 +49,7 @@
         }
         UIVisualEffectView *materialView = [[UIVisualEffectView alloc] initWithEffect:material];
         materialView.translatesAutoresizingMaskIntoConstraints = NO;
-        materialView.userInteractionEnabled = NO;
+        materialView.userInteractionEnabled = YES;
         materialView.layer.cornerRadius = 20.0;
         materialView.clipsToBounds = YES;
         [view addSubview:materialView];
@@ -59,10 +60,11 @@
             [materialView.bottomAnchor constraintEqualToAnchor:view.bottomAnchor]
         ]];
         contentView = materialView.contentView;
+        interactionView = materialView;
     }
 
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];
-    [view addGestureRecognizer:tap];
+    [interactionView addGestureRecognizer:tap];
 
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.translatesAutoresizingMaskIntoConstraints = NO;
