@@ -45,6 +45,26 @@ jobs:
           unzip -q youtube.ipa -d ytextracted
           echo "YT_VERSION=$(grep -A 1 '<key>CFBundleVersion</key>' ytextracted/Payload/YouTube.app/Info.plist | grep '<string>' | awk -F'[><]' '{print $3}')" >> $GITHUB_ENV
 
+      - name: Remove legacy UI compatibility mode
+        run: |
+          plist="ytextracted/Payload/YouTube.app/Info.plist"
+          if plutil -extract UIDesignRequiresCompatibility raw -o - "$plist" >/dev/null 2>&1; then
+            plutil -remove UIDesignRequiresCompatibility "$plist"
+          fi
+          if plutil -extract UIDesignRequiresCompatibility raw -o - "$plist" >/dev/null 2>&1; then
+            echo "::error::UIDesignRequiresCompatibility is still present in Info.plist."
+            exit 1
+          fi
+
+          # Replace the original archive entry instead of appending a duplicate.
+          zip -q -d youtube.ipa Payload/YouTube.app/Info.plist
+          (cd ytextracted && zip -q ../youtube.ipa Payload/YouTube.app/Info.plist)
+          unzip -p youtube.ipa Payload/YouTube.app/Info.plist > /tmp/YouTube.Info.check.plist
+          if plutil -extract UIDesignRequiresCompatibility raw -o - /tmp/YouTube.Info.check.plist >/dev/null 2>&1; then
+            echo "::error::Repackaged IPA still contains UIDesignRequiresCompatibility."
+            exit 1
+          fi
+
       - name: Install Dependencies
         run: brew install make ldid
 
