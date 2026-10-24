@@ -1,7 +1,7 @@
 name: Build IPA
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "test/sponsorblock-liquid-glass" ]
   workflow_dispatch:
 
 concurrency:

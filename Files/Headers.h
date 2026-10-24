@@ -153,7 +153,6 @@ static inline NSString *SBDefaultColorHexForCategory(NSString *category) {
 @interface SBSkipNotificationView : UIView
 @property (nonatomic, strong) UILabel *messageLabel;
 @property (nonatomic, strong) UIButton *actionButton;
-@property (nonatomic, strong) CAShapeLayer *fillLayer;
 @property (nonatomic, copy) void (^onAction)(void);
 @property (nonatomic, copy) void (^onDismiss)(void);
 + (instancetype)showInView:(UIView *)parentView message:(NSString *)message buttonTitle:(NSString *)buttonTitle action:(void (^)(void))action duration:(NSTimeInterval)duration;

@@ -27,14 +27,40 @@
 
     SBSkipNotificationView *view = [[SBSkipNotificationView alloc] initWithFrame:CGRectZero];
     view.translatesAutoresizingMaskIntoConstraints = NO;
-    view.backgroundColor     = [UIColor colorWithWhite:0.0 alpha:0.7];
+    view.backgroundColor     = UIColor.clearColor;
     view.layer.cornerRadius  = 20.0;
     view.layer.shadowColor   = [UIColor blackColor].CGColor;
     view.layer.shadowOffset  = CGSizeMake(0, 4);
     view.layer.shadowRadius  = 10.0;
-    view.layer.shadowOpacity = 0.5;
+    view.layer.shadowOpacity = 0.25;
     view.userInteractionEnabled = YES;
     view.onAction            = action;
+
+    // Use native Liquid Glass when available (iOS 26+), with a system blur
+    // fallback for older iOS versions.
+    UIVisualEffect *material = nil;
+    Class glassEffectClass = NSClassFromString(@"UIGlassEffect");
+    if (glassEffectClass) {
+        material = [[glassEffectClass alloc] init];
+        SEL interactiveSelector = NSSelectorFromString(@"setInteractive:");
+        if ([material respondsToSelector:interactiveSelector]) {
+            ((void (*)(id, SEL, BOOL))objc_msgSend)(material, interactiveSelector, YES);
+        }
+    } else {
+        material = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemMaterial];
+    }
+    UIVisualEffectView *materialView = [[UIVisualEffectView alloc] initWithEffect:material];
+    materialView.translatesAutoresizingMaskIntoConstraints = NO;
+    materialView.userInteractionEnabled = NO;
+    materialView.layer.cornerRadius = 20.0;
+    materialView.clipsToBounds = YES;
+    [view addSubview:materialView];
+    [NSLayoutConstraint activateConstraints:@[
+        [materialView.leadingAnchor constraintEqualToAnchor:view.leadingAnchor],
+        [materialView.trailingAnchor constraintEqualToAnchor:view.trailingAnchor],
+        [materialView.topAnchor constraintEqualToAnchor:view.topAnchor],
+        [materialView.bottomAnchor constraintEqualToAnchor:view.bottomAnchor]
+    ]];
 
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];
     [view addGestureRecognizer:tap];
@@ -42,12 +68,12 @@
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.translatesAutoresizingMaskIntoConstraints = NO;
     label.text          = message;
-    label.textColor     = [UIColor whiteColor];
+    label.textColor     = UIColor.labelColor;
     label.font          = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
     label.numberOfLines = 1;
     label.textAlignment = NSTextAlignmentCenter;
     view.messageLabel   = label;
-    [view addSubview:label];
+    [materialView.contentView addSubview:label];
 
     [parentView addSubview:view];
 
@@ -58,9 +84,9 @@
         [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
         [view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],
         [view.heightAnchor   constraintEqualToConstant:40.0],
-        [label.leadingAnchor  constraintEqualToAnchor:view.leadingAnchor    constant:20.0],
-        [label.trailingAnchor constraintEqualToAnchor:view.trailingAnchor   constant:-20.0],
-        [label.centerYAnchor  constraintEqualToAnchor:view.centerYAnchor]
+        [label.leadingAnchor  constraintEqualToAnchor:materialView.contentView.leadingAnchor    constant:20.0],
+        [label.trailingAnchor constraintEqualToAnchor:materialView.contentView.trailingAnchor   constant:-20.0],
+        [label.centerYAnchor  constraintEqualToAnchor:materialView.contentView.centerYAnchor]
     ]];
 
     view.alpha     = 0.0;
@@ -71,40 +97,6 @@
     } completion:nil];
 
     if (duration > 0) {
-        // Force layout so the pill has a real frame before we trace its border.
-        [parentView layoutIfNeeded];
-
-        // A translucent fill sits behind the label and wipes away from right to
-        // left over the notification's lifetime, signaling it's about to dismiss.
-        // The fill is clipped to the pill's rounded-rect shape via its own path,
-        // then a solid mask that shrinks horizontally does the actual wiping.
-        // Anchoring the mask at its left edge and animating transform.scale.x
-        // from 1 -> 0 keeps the left edge pinned while the visible fill collapses
-        // in from the right, like a countdown draining out of the pill.
-        CAShapeLayer *fillLayer = [CAShapeLayer layer];
-        fillLayer.frame     = view.bounds;
-        fillLayer.path      = [UIBezierPath bezierPathWithRoundedRect:view.bounds
-                                                           cornerRadius:20.0].CGPath;
-        fillLayer.fillColor = [UIColor colorWithWhite:1.0 alpha:0.22].CGColor;
-        view.fillLayer = fillLayer;
-        [view.layer insertSublayer:fillLayer atIndex:0]; // behind the message label
-
-        CALayer *wipeMask = [CALayer layer];
-        wipeMask.backgroundColor = [UIColor blackColor].CGColor;
-        wipeMask.anchorPoint     = CGPointMake(0.0, 0.5);
-        wipeMask.bounds          = CGRectMake(0, 0, view.bounds.size.width, view.bounds.size.height);
-        wipeMask.position        = CGPointMake(0.0, CGRectGetMidY(view.bounds));
-        fillLayer.mask = wipeMask;
-
-        CABasicAnimation *wipe = [CABasicAnimation animationWithKeyPath:@"transform.scale.x"];
-        wipe.fromValue        = @(1.0);
-        wipe.toValue          = @(0.0);
-        wipe.duration         = duration;
-        wipe.timingFunction   = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
-        wipe.fillMode         = kCAFillModeForwards;
-        wipe.removedOnCompletion = NO;
-        [wipeMask addAnimation:wipe forKey:@"sbWipe"];
-
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{ [view dismiss]; });
     }
