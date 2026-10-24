@@ -36,31 +36,30 @@
     view.userInteractionEnabled = YES;
     view.onAction            = action;
 
-    // Use native Liquid Glass when available (iOS 26+), with a system blur
-    // fallback for older iOS versions.
-    UIVisualEffect *material = nil;
+    // Use only native Liquid Glass. On older systems, keep the notification
+    // content without substituting a different material.
     Class glassEffectClass = NSClassFromString(@"UIGlassEffect");
+    UIView *contentView = view;
     if (glassEffectClass) {
-        material = [[glassEffectClass alloc] init];
+        UIVisualEffect *material = [[glassEffectClass alloc] init];
         SEL interactiveSelector = NSSelectorFromString(@"setInteractive:");
         if ([material respondsToSelector:interactiveSelector]) {
             ((void (*)(id, SEL, BOOL))objc_msgSend)(material, interactiveSelector, YES);
         }
-    } else {
-        material = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemMaterial];
+        UIVisualEffectView *materialView = [[UIVisualEffectView alloc] initWithEffect:material];
+        materialView.translatesAutoresizingMaskIntoConstraints = NO;
+        materialView.userInteractionEnabled = NO;
+        materialView.layer.cornerRadius = 20.0;
+        materialView.clipsToBounds = YES;
+        [view addSubview:materialView];
+        [NSLayoutConstraint activateConstraints:@[
+            [materialView.leadingAnchor constraintEqualToAnchor:view.leadingAnchor],
+            [materialView.trailingAnchor constraintEqualToAnchor:view.trailingAnchor],
+            [materialView.topAnchor constraintEqualToAnchor:view.topAnchor],
+            [materialView.bottomAnchor constraintEqualToAnchor:view.bottomAnchor]
+        ]];
+        contentView = materialView.contentView;
     }
-    UIVisualEffectView *materialView = [[UIVisualEffectView alloc] initWithEffect:material];
-    materialView.translatesAutoresizingMaskIntoConstraints = NO;
-    materialView.userInteractionEnabled = NO;
-    materialView.layer.cornerRadius = 20.0;
-    materialView.clipsToBounds = YES;
-    [view addSubview:materialView];
-    [NSLayoutConstraint activateConstraints:@[
-        [materialView.leadingAnchor constraintEqualToAnchor:view.leadingAnchor],
-        [materialView.trailingAnchor constraintEqualToAnchor:view.trailingAnchor],
-        [materialView.topAnchor constraintEqualToAnchor:view.topAnchor],
-        [materialView.bottomAnchor constraintEqualToAnchor:view.bottomAnchor]
-    ]];
 
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:view action:@selector(handleTap)];
     [view addGestureRecognizer:tap];
@@ -73,7 +72,7 @@
     label.numberOfLines = 1;
     label.textAlignment = NSTextAlignmentCenter;
     view.messageLabel   = label;
-    [materialView.contentView addSubview:label];
+    [contentView addSubview:label];
 
     [parentView addSubview:view];
 
@@ -84,9 +83,9 @@
         [view.centerXAnchor  constraintEqualToAnchor:parentView.centerXAnchor],
         [view.bottomAnchor   constraintEqualToAnchor:parentView.safeAreaLayoutGuide.bottomAnchor constant:bottomOffset],
         [view.heightAnchor   constraintEqualToConstant:40.0],
-        [label.leadingAnchor  constraintEqualToAnchor:materialView.contentView.leadingAnchor    constant:20.0],
-        [label.trailingAnchor constraintEqualToAnchor:materialView.contentView.trailingAnchor   constant:-20.0],
-        [label.centerYAnchor  constraintEqualToAnchor:materialView.contentView.centerYAnchor]
+        [label.leadingAnchor  constraintEqualToAnchor:contentView.leadingAnchor    constant:20.0],
+        [label.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor   constant:-20.0],
+        [label.centerYAnchor  constraintEqualToAnchor:contentView.centerYAnchor]
     ]];
 
     view.alpha     = 0.0;
